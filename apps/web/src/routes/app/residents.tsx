@@ -15,7 +15,7 @@ import {
   type Resident,
   type ResidentStatus,
 } from '@/api/residents';
-import { ENROLLMENT_STATUS_LABEL, listCourses, type EnrollmentStatus, type TrainingCourse } from '@/api/training';
+import { ENROLLMENT_STATUS_LABEL, byLadder, listCourses, type EnrollmentStatus, type TrainingCourse } from '@/api/training';
 import { PageHeader } from '@/components/page-header';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -70,10 +70,8 @@ export function ResidentsPage() {
     );
   }, [residents, search]);
 
-  const steps = useMemo(
-    () => courses.filter(course => course.isActive).sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id),
-    [courses]
-  );
+  // STEP 번호가 있는 과정만 사다리다. 숨긴 과정도 수료 이력은 남아 있으니 함께 보여준다.
+  const steps = useMemo(() => courses.filter(course => course.step !== null).sort(byLadder), [courses]);
   const countFor = (statusId: number) => summary?.byStatus.find(row => row.statusId === statusId)?.count ?? 0;
 
   return (
@@ -242,7 +240,7 @@ const STEP_STYLE: Record<EnrollmentStatus | 'none', string> = {
 };
 
 /**
- * 훈련 사다리 — 과정 순서(sortOrder)가 곧 STEP 이다. 수료는 초록, 수강 중은 노랑.
+ * 훈련 사다리 — 과정에 붙은 STEP 번호(course.step)로 그린다. 수료는 초록, 수강 중은 노랑.
  * 목록 오른쪽에 숫자 칸으로 붙여서, 누가 어디까지 왔는지 세로로 훑어볼 수 있게 한다.
  */
 function TrainingSteps({ steps, training }: { steps: TrainingCourse[]; training: Resident['training'] }) {
@@ -250,7 +248,7 @@ function TrainingSteps({ steps, training }: { steps: TrainingCourse[]; training:
   const byCourse = new Map(training.map(row => [row.courseId, row.status]));
   return (
     <div className="hidden shrink-0 items-center gap-1 sm:flex">
-      {steps.map((course, index) => {
+      {steps.map(course => {
         const status = byCourse.get(course.id);
         return (
           <span
@@ -261,7 +259,7 @@ function TrainingSteps({ steps, training }: { steps: TrainingCourse[]; training:
               STEP_STYLE[status ?? 'none']
             )}
           >
-            {index + 1}
+            {course.step}
           </span>
         );
       })}
@@ -559,10 +557,12 @@ function ResidentDetailModal({
                 <section className="space-y-2">
                   <h3 className="text-sm font-semibold">훈련 단계</h3>
                   {steps.length === 0 ? (
-                    <p className="text-xs text-[var(--color-muted-foreground)]">훈련 과정이 없습니다.</p>
+                    <p className="text-xs text-[var(--color-muted-foreground)]">
+                      STEP 번호가 붙은 과정이 없습니다. 훈련 화면의 과정 설정에서 정하세요.
+                    </p>
                   ) : (
                     <ol className="space-y-1">
-                      {steps.map((course, index) => {
+                      {steps.map(course => {
                         const status = resident.training.find(row => row.courseId === course.id)?.status;
                         return (
                           <li key={course.id} className="flex items-center gap-2 text-sm">
@@ -572,7 +572,7 @@ function ResidentDetailModal({
                                 STEP_STYLE[status ?? 'none']
                               )}
                             >
-                              {index + 1}
+                              {course.step}
                             </span>
                             <span className={cn(!status && 'text-[var(--color-muted-foreground)]')}>{course.name}</span>
                             <span className="ml-auto text-xs text-[var(--color-muted-foreground)]">

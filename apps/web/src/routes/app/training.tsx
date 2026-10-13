@@ -6,7 +6,6 @@ import { listMembers, type Member } from '@/api/members';
 import {
   COHORT_STATUS_LABEL,
   ENROLLMENT_STATUS_LABEL,
-  TRAINING_FORMAT_LABEL,
   addSession,
   createCohort,
   deleteCohort,
@@ -20,9 +19,11 @@ import {
   updateCohort,
   updateEnrollmentStatus,
   updateSession,
+  byLadder,
   type Cohort,
   type CohortStatus,
   type EnrollmentStatus,
+  type TrainingCourse,
 } from '@/api/training';
 import { PageHeader } from '@/components/page-header';
 import { Avatar } from '@/components/ui/avatar';
@@ -36,6 +37,7 @@ import { todayString } from '@/lib/date';
 import { usePermissions } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { CourseManagerModal } from './course-manager';
+import { CoursePicker } from './course-picker';
 
 const STATUS_TONE: Record<CohortStatus, 'neutral' | 'muted' | 'success' | 'warn'> = {
   planned: 'neutral',
@@ -143,15 +145,11 @@ export function TrainingPage() {
   );
 }
 
-function CohortForm({
-  courses,
-  onClose,
-}: {
-  courses: { id: number; name: string; format: string; defaultSessionCount: number }[];
-  onClose: () => void;
-}) {
+function CohortForm({ courses, onClose }: { courses: TrainingCourse[]; onClose: () => void }) {
   const queryClient = useQueryClient();
-  const [courseId, setCourseId] = useState<number | null>(courses[0]?.id ?? null);
+  const [courseId, setCourseId] = useState<number | null>(
+    () => [...courses].filter(course => course.isActive).sort(byLadder)[0]?.id ?? null
+  );
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState(todayString());
   const [sessionCount, setSessionCount] = useState<string>('');
@@ -177,25 +175,8 @@ function CohortForm({
   return (
     <Card>
       <CardContent className="space-y-3 py-4">
-        <div className="flex flex-wrap gap-1.5">
-          {courses.map(course => (
-            <button
-              key={course.id}
-              onClick={() => setCourseId(course.id)}
-              className={cn(
-                'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                courseId === course.id
-                  ? 'border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)]'
-                  : 'border-[var(--color-border)] hover:bg-[var(--color-muted)]'
-              )}
-            >
-              {course.name}
-              <span className="ml-1 opacity-60">
-                {TRAINING_FORMAT_LABEL[course.format as keyof typeof TRAINING_FORMAT_LABEL] ?? course.format}
-              </span>
-            </button>
-          ))}
-        </div>
+        {/* 노션 선택 속성처럼 — 없는 과정은 이름을 적어 바로 만들고, STEP·수료 시 단계도 이 칸에서 고친다 */}
+        <CoursePicker value={courseId} onChange={setCourseId} />
 
         <div className="flex flex-wrap gap-2">
           <Input

@@ -3,6 +3,7 @@ import { DataSources } from '@src/database/data-sources';
 import { MemberEntity } from '@src/database/entities/member.entity';
 import { MemberStatusEntity } from '@src/database/entities/member-status.entity';
 import { MemberStatusHistoryEntity } from '@src/database/entities/member-status-history.entity';
+import { TrainingCourseEntity } from '@src/database/entities/training-course.entity';
 
 export type UpsertMemberStatusInput = {
   name?: string;
@@ -76,6 +77,14 @@ export class MemberStatusService {
     if (inHistory > 0) {
       throw new ConflictException(
         `과거에 이 상태를 거친 기록이 ${inHistory}건 있어 삭제할 수 없습니다. 지우면 단계 이동 이력이 끊깁니다 — 비활성화하세요.`
+      );
+    }
+
+    // 훈련 과정이 "수료하면 이 단계로" 제안하고 있으면 지우지 않는다 — 지우면 제안이 조용히 사라진다.
+    const courses = await DataSources.instance.getRepository(TrainingCourseEntity).find({ where: { churchId, completionStatusId: id } });
+    if (courses.length > 0) {
+      throw new ConflictException(
+        `훈련 과정(${courses.map(course => course.name).join(', ')})이 수료 시 이 단계로 올리기를 제안하고 있어 삭제할 수 없습니다. 과정 설정을 먼저 바꾸세요.`
       );
     }
 

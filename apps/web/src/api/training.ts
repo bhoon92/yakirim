@@ -47,7 +47,25 @@ export type TrainingCourse = {
   description: string | null;
   sortOrder: number;
   isActive: boolean;
+  /** 훈련 사다리 단계 번호. null = 사다리 밖 과정. */
+  step: number | null;
+  /** 수료 시 올리기를 제안할 재적상태 id. */
+  completionStatusId: number | null;
+  /** 수료 시 공동체 간사 등록을 제안할지. */
+  completionSuggestsResident: boolean;
+  /** 이 과정으로 열린 기수 수 — 있으면 지울 수 없고 숨기기만 된다. */
+  cohortCount: number;
 };
+
+export type CoursePatch = Partial<{
+  name: string;
+  format: TrainingFormat;
+  defaultSessionCount: number;
+  isActive: boolean;
+  step: number | null;
+  completionStatusId: number | null;
+  completionSuggestsResident: boolean;
+}>;
 
 export type Cohort = {
   id: number;
@@ -100,13 +118,24 @@ export type MemberTrainingHistory = {
   attendanceRate: number;
 };
 
+/** 사다리 과정(STEP 순) 먼저, 그다음 사다리 밖 과정(정렬순서). 과정이 보이는 모든 곳이 같은 순서를 쓴다. */
+export function byLadder(a: TrainingCourse, b: TrainingCourse): number {
+  if (a.step !== null && b.step !== null) return a.step - b.step || a.id - b.id;
+  if (a.step !== null) return -1;
+  if (b.step !== null) return 1;
+  return a.sortOrder - b.sortOrder || a.id - b.id;
+}
+
 export const listCourses = () => request<TrainingCourse[]>(`${BASE}/courses`);
 
 export const createCourse = (payload: { name: string; format?: TrainingFormat; defaultSessionCount?: number; description?: string }) =>
   request<TrainingCourse>(`${BASE}/courses`, { method: 'POST', body: JSON.stringify(payload) });
 
-export const updateCourse = (id: number, payload: Partial<{ name: string; defaultSessionCount: number; isActive: boolean }>) =>
+export const updateCourse = (id: number, payload: CoursePatch) =>
   request<TrainingCourse>(`${BASE}/courses/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+
+/** 기수가 있는 과정은 409 — 숨기기(isActive: false)를 쓴다. */
+export const deleteCourse = (id: number) => request<void>(`${BASE}/courses/${id}`, { method: 'DELETE' });
 
 export const listCohorts = (params?: { courseId?: number; status?: CohortStatus }) => {
   const query = new URLSearchParams();

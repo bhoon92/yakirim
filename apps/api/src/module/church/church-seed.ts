@@ -117,34 +117,51 @@ const RESIDENT_STATUSES: { name: string; countsAsActive: boolean }[] = [
 ];
 
 /**
- * 훈련 과정 — 공식 사이트(kodministry.com/training)의 STEP 1~4. 순서(sortOrder)가 곧 단계다.
- * STEP 5 "다윗의열쇠 선교사(종신 헌신)"는 과정이 아니라 도착점이라 선교사 트랙이 맡는다.
+ * 훈련 과정 — 공식 사이트(kodministry.com/training)의 STEP 1~4.
+ * STEP 5 "다윗의열쇠 선교사(종신 헌신)"는 과정이 아니라 도착점이라 간사·선교사 트랙이 맡는다.
+ * `completionStatus` 는 수료 시 올리기를 제안할 재적상태 **이름**이다 — 위 MEMBER_STATUSES 에서 찾아 id 로 바꾼다.
  * 회차 수는 기수 개설 시 기본값으로 쓰인다. 합숙 과정은 기간이 길어 회차 1개로 두고 교회가 나눠 쓴다.
  */
-const TRAINING_COURSES: { name: string; format: TrainingFormat; defaultSessionCount: number; description: string }[] = [
+const TRAINING_COURSES: {
+  name: string;
+  format: TrainingFormat;
+  defaultSessionCount: number;
+  description: string;
+  step: number;
+  completionStatus?: string;
+  completionSuggestsResident?: boolean;
+}[] = [
   {
     name: '믿음으로 길을 걷다',
     format: TrainingFormat.RETREAT,
     defaultSessionCount: 4,
-    description: 'STEP 1. 3박 4일 수련회.',
+    description: '3박 4일 수련회.',
+    step: 1,
+    completionStatus: '정착',
   },
   {
     name: '살아있는 믿음학교',
     format: TrainingFormat.WEEKLY,
     defaultSessionCount: 12,
-    description: 'STEP 2. 12주간 매주 토요일 + 10일 아웃리치.',
+    description: '12주간 매주 토요일 + 10일 아웃리치.',
+    step: 2,
+    completionStatus: '훈련생',
   },
   {
     name: '고생질',
     format: TrainingFormat.INTENSIVE,
     defaultSessionCount: 1,
-    description: 'STEP 3. 3개월 합숙 훈련 (말씀 앞에서 고민·생각·질문).',
+    description: '3개월 합숙 훈련 (말씀 앞에서 고민·생각·질문).',
+    step: 3,
+    completionStatus: '사역자',
   },
   {
     name: '선교사학교',
     format: TrainingFormat.INTENSIVE,
     defaultSessionCount: 1,
-    description: 'STEP 4. 6개월 인턴십. 선교사와 함께 생활하며 배운다.',
+    description: '6개월 인턴십. 선교사와 함께 생활하며 배운다.',
+    step: 4,
+    completionSuggestsResident: true,
   },
 ];
 
@@ -157,7 +174,7 @@ const CALENDARS: { name: string; color: string; sortOrder: number }[] = [
 /** 연도별 기준정보(기관·사역팀·공동체)는 생성 시점의 연도로 시드한다. */
 export async function seedChurchReferences(manager: EntityManager, churchId: number, year: number): Promise<void> {
   const statusRepo = manager.getRepository(MemberStatusEntity);
-  await statusRepo.save(
+  const statuses = await statusRepo.save(
     MEMBER_STATUSES.map(status =>
       statusRepo.create({
         churchId,
@@ -200,7 +217,18 @@ export async function seedChurchReferences(manager: EntityManager, churchId: num
   await accountRepo.save(ACCOUNT_CATEGORIES.map((name, index) => accountRepo.create({ churchId, name, sortOrder: index })));
 
   const courseRepo = manager.getRepository(TrainingCourseEntity);
-  await courseRepo.save(TRAINING_COURSES.map((course, index) => courseRepo.create({ churchId, ...course, sortOrder: index })));
+  const statusIdByName = new Map(statuses.map(status => [status.name, status.id]));
+  await courseRepo.save(
+    TRAINING_COURSES.map(({ completionStatus, ...course }, index) =>
+      courseRepo.create({
+        churchId,
+        ...course,
+        completionStatusId: completionStatus ? (statusIdByName.get(completionStatus) ?? null) : null,
+        completionSuggestsResident: course.completionSuggestsResident ?? false,
+        sortOrder: index,
+      })
+    )
+  );
 
   const stageRepo = manager.getRepository(MissionaryStageEntity);
   await stageRepo.save(MISSIONARY_STAGES.map((stage, index) => stageRepo.create({ churchId, ...stage, sortOrder: index })));

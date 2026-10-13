@@ -39,4 +39,19 @@ export class TrainingCourseEntity extends BaseDateEntityWithDeletedAt {
 
   @Column({ default: true })
   isActive!: boolean;
+
+  /**
+   * 훈련 사다리에서의 단계 번호 (STEP 1, 2 …). null = 사다리 밖 과정(여름 수련회 같은 일회성 훈련).
+   * 정렬순서(sortOrder)와 따로 둔다 — 사다리 밖 과정이 끼어들면 순서만으로는 STEP 번호가 어긋난다.
+   */
+  @Column({ comment: '훈련 사다리 단계 번호 (null = 사다리 밖)', type: 'smallint', nullable: true })
+  step?: number | null;
+
+  /** 수료하면 올리기를 제안할 재적상태 (member_status). null = 제안 안 함. 자동 전환은 하지 않는다. */
+  @Column({ comment: '수료 시 제안할 재적상태', type: 'int', nullable: true })
+  completionStatusId?: number | null;
+
+  /** 수료하면 공동체 간사 등록을 제안할지 (선교사학교처럼 간사로 이어지는 과정). */
+  @Column({ comment: '수료 시 간사 등록 제안', default: false })
+  completionSuggestsResident!: boolean;
 }

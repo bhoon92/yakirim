@@ -33,6 +33,24 @@ export class CreateCourseDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  /** 훈련 사다리 단계 번호. null 을 보내면 사다리 밖 과정이 된다. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  step?: number | null;
+
+  /** 수료 시 올리기를 제안할 재적상태 id. null 을 보내면 제안하지 않는다. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  completionStatusId?: number | null;
+
+  /** 수료 시 공동체 간사 등록을 제안할지. */
+  @IsOptional()
+  @IsBoolean()
+  completionSuggestsResident?: boolean;
 }
 
 export class UpdateCourseDto extends PartialType(CreateCourseDto) {}
