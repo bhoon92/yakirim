@@ -28,7 +28,6 @@ lerna-debug.log*
 .claude
 .vscode
 
-# 작업용 문서 — 로컬에만 두고 커밋하지 않는다.
-# 백업: ~/Documents/yakirim-notes/  (git clean -xdf 는 아래 파일들도 지우므로 주의)
-HANDOFF.md
-planning.md
+# HANDOFF.md / planning.md 는 **추적한다**.
+# 예전에는 로컬 전용이었는데, 그러면 클론한 환경·다른 도구에서 작업을 이어받을 수가 없다
+# (git clean -xdf 한 번이면 사라지기도 한다). 이어서 작업하는 데 필요한 문서라 레포에 둔다.
