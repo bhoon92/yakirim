@@ -5,6 +5,7 @@ import {
   Globe2,
   GraduationCap,
   HelpCircle,
+  Home,
   Images,
   LayoutDashboard,
   LogOut,
@@ -41,12 +42,14 @@ type NavGroup = {
 /**
  * flex 처럼 메뉴를 성격별로 묶는다. 평평한 9개 목록은 훑기 어렵다.
  * 순서 = 이 교회의 우선순위 (양성이 사역·운영보다 먼저).
+ * 양성 안에서는 공동체 간사가 맨 위다 — 이 교회 구성원의 중심이 공동생활을 하는 간사들이다.
  */
 const NAV_GROUPS: NavGroup[] = [
   { label: null, items: [{ to: '/app', label: '홈', icon: LayoutDashboard, end: true }] },
   {
     label: '양성',
     items: [
+      { to: '/app/residents', label: '간사', icon: Home },
       { to: '/app/members', label: '교인', icon: Users },
       { to: '/app/training', label: '훈련', icon: GraduationCap },
       { to: '/app/missionaries', label: '선교사', icon: Globe2 },

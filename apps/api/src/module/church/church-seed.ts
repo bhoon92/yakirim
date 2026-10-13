@@ -8,6 +8,7 @@ import { MissionaryStageEntity } from '@src/database/entities/missionary-stage.e
 import { OfferingCategoryEntity } from '@src/database/entities/offering-category.entity';
 import { CareNoteTypeEntity } from '@src/database/entities/care-note-type.entity';
 import { PositionEntity } from '@src/database/entities/position.entity';
+import { ResidentStatusEntity } from '@src/database/entities/resident-status.entity';
 import { SmallGroupEntity } from '@src/database/entities/small-group.entity';
 import { TrainingCourseEntity, TrainingFormat } from '@src/database/entities/training-course.entity';
 import { WorshipServiceEntity } from '@src/database/entities/worship-service.entity';
@@ -61,22 +62,31 @@ const CARE_NOTE_TYPES: { name: string; systemKey?: string }[] = [
   { name: '양육' },
   { name: '상담' },
   { name: '파송보고', systemKey: 'field_report' },
+  // 기획행정팀이 공동체 간사에게 남기는 기록
+  { name: '케어' },
+  { name: '재훈련' },
   { name: '기타' },
 ];
 
 /** 사역 역할 (구 직분). 청년 공동체라 장로·권사 대신 사역 중심으로 둔다. */
 const POSITIONS = ['담임목사', '목사', '전도사', '간사', '팀장', '사역자'];
 
-/** 5개 사역팀 — 이 교회의 핵심 조직 축이자 양성 인큐베이터. */
-const MINISTRIES = ['예배사역팀', '미디어·문화예술팀', '다음세대팀', '비즈니스팀', '해외선교팀'];
+/**
+ * 사역팀 — 이 교회의 핵심 조직 축이자 양성 인큐베이터.
+ * 다윗의열쇠 공식 사이트(kodministry.com, 2026-10 확인)와 복음기도신문(2025-10) 기준.
+ * 괄호 안은 실제 팀 브랜드: 예배(Keepers Worship) · 미디어(From Him) · 문화예술(KEPT, 드라마 워십) ·
+ * 다음세대(The Keys) · 훈련(Boot Camp) · 해외선교(keyman) · 비즈니스(ADO, 의류 브랜드 포함).
+ */
+const MINISTRIES = ['예배팀', '미디어팀', '문화예술팀', '다음세대팀', '훈련팀', '해외선교팀', '비즈니스팀', '기획행정팀'];
 
-/** 상설 기관 (연령 부서 아님). */
-const DEPARTMENTS = ['본부', '유치원', '카페'];
+/** 상설 기관 (연령 부서 아님). 다음세대 교육(더키즈)과 베이커리카페(ADO). */
+const DEPARTMENTS = ['본부', '더키즈', '카페'];
 
 /** 공동생활 공동체. 실제 하우스 이름으로 바꿔 쓰면 된다. */
 const SMALL_GROUPS = ['1하우스', '2하우스'];
 
-const WORSHIP_SERVICES = ['주일예배', '수요예배', '금요기도회', '새벽기도회'];
+/** 공식 사이트의 예배 안내 기준. 수요·새벽 예배는 없고, 다음세대 예배와 교사 예배가 따로 있다. */
+const WORSHIP_SERVICES = ['주일예배', '다음세대예배', '다음세대 교사예배', '금요기도회', '오픈예배'];
 
 const OFFERING_CATEGORIES = ['십일조', '주정헌금', '감사헌금', '선교헌금', '건축헌금', '특별헌금'];
 
@@ -96,25 +106,45 @@ const MISSIONARY_STAGES: { name: string; countsAsActive: boolean }[] = [
   { name: '종료', countsAsActive: false },
 ];
 
-/** 훈련 과정 — 기사에 나온 3종을 기본값으로. 회차 수는 기수 개설 시 기본값으로 쓰인다. */
+/**
+ * 간사 상태 기본값. 코드가 아는 건 `countsAsActive`(지금 공동체에 있는 사람으로 셀지) 하나뿐이다.
+ * 안식 중인 간사도 공동체 식구라 집계에 넣는다.
+ */
+const RESIDENT_STATUSES: { name: string; countsAsActive: boolean }[] = [
+  { name: '활동', countsAsActive: true },
+  { name: '안식', countsAsActive: true },
+  { name: '퇴소', countsAsActive: false },
+];
+
+/**
+ * 훈련 과정 — 공식 사이트(kodministry.com/training)의 STEP 1~4. 순서(sortOrder)가 곧 단계다.
+ * STEP 5 "다윗의열쇠 선교사(종신 헌신)"는 과정이 아니라 도착점이라 선교사 트랙이 맡는다.
+ * 회차 수는 기수 개설 시 기본값으로 쓰인다. 합숙 과정은 기간이 길어 회차 1개로 두고 교회가 나눠 쓴다.
+ */
 const TRAINING_COURSES: { name: string; format: TrainingFormat; defaultSessionCount: number; description: string }[] = [
   {
     name: '믿음으로 길을 걷다',
     format: TrainingFormat.RETREAT,
     defaultSessionCount: 4,
-    description: '3박 4일 집중 수련회.',
+    description: 'STEP 1. 3박 4일 수련회.',
   },
   {
     name: '살아있는 믿음학교',
     format: TrainingFormat.WEEKLY,
     defaultSessionCount: 12,
-    description: '12주간 매주 토요일 진행.',
+    description: 'STEP 2. 12주간 매주 토요일 + 10일 아웃리치.',
   },
   {
-    name: '고생질 프로젝트',
+    name: '고생질',
     format: TrainingFormat.INTENSIVE,
     defaultSessionCount: 1,
-    description: '합숙형 말씀 질의응답 훈련.',
+    description: 'STEP 3. 3개월 합숙 훈련 (말씀 앞에서 고민·생각·질문).',
+  },
+  {
+    name: '선교사학교',
+    format: TrainingFormat.INTENSIVE,
+    defaultSessionCount: 1,
+    description: 'STEP 4. 6개월 인턴십. 선교사와 함께 생활하며 배운다.',
   },
 ];
 
@@ -174,6 +204,11 @@ export async function seedChurchReferences(manager: EntityManager, churchId: num
 
   const stageRepo = manager.getRepository(MissionaryStageEntity);
   await stageRepo.save(MISSIONARY_STAGES.map((stage, index) => stageRepo.create({ churchId, ...stage, sortOrder: index })));
+
+  const residentStatusRepo = manager.getRepository(ResidentStatusEntity);
+  await residentStatusRepo.save(
+    RESIDENT_STATUSES.map((status, index) => residentStatusRepo.create({ churchId, ...status, sortOrder: index }))
+  );
 
   const calendarRepo = manager.getRepository(CalendarEntity);
   await calendarRepo.save(CALENDARS.map(calendar => calendarRepo.create({ churchId, ...calendar })));

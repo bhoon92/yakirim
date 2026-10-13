@@ -489,15 +489,15 @@ function ReferenceRow({
 function exampleFor(kind: ReferenceKind): string {
   switch (kind) {
     case 'department':
-      return '본부 / 유치원 / 카페';
+      return '본부 / 더키즈 / 카페';
     case 'ministry':
-      return '예배사역팀 / 미디어·문화예술팀 / 해외선교팀';
+      return '예배팀 / 미디어팀 / 해외선교팀';
     case 'smallGroup':
       return '1하우스 / 2하우스';
     case 'position':
       return '목사 / 전도사 / 간사 / 팀장';
     case 'worshipService':
-      return '주일예배 / 수요예배 / 금요기도회 / 새벽기도회';
+      return '주일예배 / 다음세대예배 / 금요기도회';
     case 'memberStatus':
       return '방문 / 새가족 / 정착 / 훈련생 / 사역자 / 파송';
     case 'careNoteType':

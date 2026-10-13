@@ -11,6 +11,7 @@ export const SwaggerTag = {
   MEMBER: 'member',
   TRAINING: 'training',
   MISSIONARY: 'missionary',
+  RESIDENT: 'resident',
   AFFILIATION: 'member-affiliation',
   POSITION: 'member-role',
   ORGANIZATION_CHART: 'organization-chart',
@@ -79,6 +80,16 @@ export const SWAGGER_TAG_DESCRIPTIONS: ReadonlyArray<{ name: string; description
       '단계: 후보(candidate) → 훈련(training) → 파송확정(commissioned) → 현지(field) → 안식년(furlough) → 복귀(returned) / 종료(ended)',
       '',
       '파송(commissioned 이후) 상태가 되면 교인의 재적상태도 "파송"으로 바뀌어 **출석 명단에서 빠진다**.',
+    ].join('\n'),
+  },
+  {
+    name: SwaggerTag.RESIDENT,
+    description: [
+      '공동체 간사 — 공동생활을 하며 내부에서 섬기는 선교사. 교인 1명당 프로필 최대 1개.',
+      '',
+      '해외 파송(missionary)과 별개 트랙이다. 하우스·사역팀·역할은 교인의 소속·사역 역할을 그대로 읽고,',
+      '케어·재훈련 기록은 양육기록(care-note)에 종류로 남긴다.',
+      '상태(활동/안식/퇴소)는 교회별 기준정보이며 `countsAsActive` 만 코드가 아는 규약이다.',
     ].join('\n'),
   },
   {

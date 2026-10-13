@@ -14,6 +14,8 @@ export type Permission =
   | 'training:write'
   | 'missionary:read'
   | 'missionary:write'
+  | 'resident:read'
+  | 'resident:write'
   | 'calendar:read'
   | 'calendar:write'
   | 'gallery:read'
@@ -29,6 +31,7 @@ const READS: Permission[] = [
   'attendance:read',
   'training:read',
   'missionary:read',
+  'resident:read',
   'calendar:read',
   'gallery:read',
 ];
@@ -38,6 +41,7 @@ const SACRED_WRITES: Permission[] = [
   'care:write',
   'training:write',
   'missionary:write',
+  'resident:write',
   'calendar:write',
   'gallery:write',
   'settings:write',
