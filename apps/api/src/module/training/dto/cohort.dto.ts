@@ -107,3 +107,13 @@ export class MarkTrainingAttendanceDto {
   @IsBoolean()
   present!: boolean;
 }
+
+export class ApplyPromotionDto {
+  /** 올릴 교인. 대상이 아닌 사람(이미 올라갔거나 미수료)은 서버가 건너뛴다. */
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  memberIds!: number[];
+}

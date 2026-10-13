@@ -38,6 +38,7 @@ import { usePermissions } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { CourseManagerModal } from './course-manager';
 import { CoursePicker } from './course-picker';
+import { PromotionPanel } from './promotion-panel';
 
 const STATUS_TONE: Record<CohortStatus, 'neutral' | 'muted' | 'success' | 'warn'> = {
   planned: 'neutral',
@@ -359,6 +360,9 @@ function CohortDetailModal({ cohort, onClose }: { cohort: Cohort; onClose: () =>
             />
           )}
 
+          {/* 수료 처리하면 여기 뜬다 — 표가 길어도 바로 보이게 위쪽에 둔다 */}
+          <PromotionPanel cohortId={cohort.id} />
+
           {isLoading || !detail ? (
             <p className="text-sm text-[var(--color-muted-foreground)]">불러오는 중…</p>
           ) : detail.roster.length === 0 ? (
@@ -497,7 +501,9 @@ function CohortDetailModal({ cohort, onClose }: { cohort: Cohort; onClose: () =>
             </div>
           )}
 
-          <p className="text-xs text-[var(--color-muted-foreground)]">출석률은 참고용입니다. 수료는 담당자가 직접 확정합니다.</p>
+          <p className="text-xs text-[var(--color-muted-foreground)]">
+            출석률은 참고용입니다. 수료는 담당자가 직접 확정하고, 수료하면 다음 단계 올리기를 위에서 제안합니다.
+          </p>
         </div>
       </div>
     </div>

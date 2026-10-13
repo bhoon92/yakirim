@@ -190,3 +190,22 @@ export const updateEnrollmentStatus = (enrollmentId: number, status: EnrollmentS
 export const removeEnrollment = (enrollmentId: number) => request<void>(`${BASE}/enrollments/${enrollmentId}`, { method: 'DELETE' });
 
 export const fetchMemberTrainingHistory = (memberId: number) => request<MemberTrainingHistory[]>(`${BASE}/members/${memberId}`);
+
+// ─── 수료 → 단계 제안 ────────────────────────────────────────
+
+/** 기수 수료자 중 과정이 정한 단계보다 아래에 있는 사람, 그리고 (과정이 제안하면) 아직 간사가 아닌 수료자. */
+export type CohortPromotions = {
+  target: { id: number; name: string } | null;
+  candidates: { memberId: number; memberName: string; statusId: number; statusName: string | null; completedAt: string | null }[];
+  suggestsResident: boolean;
+  residentCandidates: { memberId: number; memberName: string }[];
+};
+
+export const fetchCohortPromotions = (cohortId: number) => request<CohortPromotions>(`${BASE}/cohorts/${cohortId}/promotions`);
+
+/** 대상 여부는 서버가 다시 판단한다 — 이미 올라간 사람은 skipped. */
+export const applyCohortPromotions = (cohortId: number, memberIds: number[]) =>
+  request<{ promoted: number; skipped: number }>(`${BASE}/cohorts/${cohortId}/promotions`, {
+    method: 'POST',
+    body: JSON.stringify({ memberIds }),
+  });

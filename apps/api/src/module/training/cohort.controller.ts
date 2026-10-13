@@ -9,6 +9,7 @@ import { PermissionsGuard } from '@src/module/auth/guards/permissions.guard';
 import type { AuthContext } from '@src/module/auth/types/auth-context';
 import { TrainingCohortService } from './cohort.service';
 import {
+  ApplyPromotionDto,
   CreateCohortDto,
   EnrollMembersDto,
   ListCohortQueryDto,
@@ -17,6 +18,7 @@ import {
   UpdateSessionDto,
 } from './dto/cohort.dto';
 import { TrainingEnrollmentService } from './enrollment.service';
+import { TrainingPromotionService } from './promotion.service';
 
 type Auth = AuthContext & { churchId: number };
 
@@ -27,7 +29,8 @@ type Auth = AuthContext & { churchId: number };
 export class TrainingCohortController {
   constructor(
     private readonly cohorts: TrainingCohortService,
-    private readonly enrollments: TrainingEnrollmentService
+    private readonly enrollments: TrainingEnrollmentService,
+    private readonly promotions: TrainingPromotionService
   ) {}
 
   @Get()
@@ -150,5 +153,35 @@ export class TrainingCohortController {
   @ApiOkResponse({ schema: { type: 'object', properties: { added: { type: 'number' }, skipped: { type: 'number' } } } })
   enroll(@RequireChurch() auth: Auth, @Param('id', ParseIntPipe) id: number, @Body() dto: EnrollMembersDto) {
     return this.enrollments.enroll(auth.churchId, id, dto);
+  }
+
+  @Get(':id/promotions')
+  @Permissions('training:read')
+  @ApiOperation({
+    summary: '수료자 단계 제안',
+    description: [
+      '이 기수 수료자 중 과정이 정한 단계(`completionStatusId`)보다 **아래에 있는 사람**과,',
+      '과정이 간사 등록을 제안하면(`completionSuggestsResident`) 아직 간사가 아닌 수료자를 돌려준다.',
+      '',
+      '저장된 제안이 아니라 매번 계산한다 — 이미 올렸거나 다른 경로로 올라간 사람은 저절로 빠진다.',
+      '**자동으로 바꾸지 않는다.** 반영은 `POST` 로 담당자가 한다.',
+    ].join('\n'),
+  })
+  listPromotions(@RequireChurch() auth: Auth, @Param('id', ParseIntPipe) id: number) {
+    return this.promotions.forCohort(auth.churchId, id);
+  }
+
+  @Post(':id/promotions')
+  @Permissions('member:write')
+  @ApiOperation({
+    summary: '수료자 단계 올리기',
+    description: [
+      '고른 수료자의 재적상태를 과정이 정한 단계로 바꾸고 단계 이력을 남긴다(시작일 = 수료일, 사유 = "과정 기수 수료").',
+      '대상 여부는 서버가 다시 계산해서, 대상이 아닌 사람은 `skipped` 로 센다.',
+    ].join('\n'),
+  })
+  @ApiOkResponse({ schema: { type: 'object', properties: { promoted: { type: 'number' }, skipped: { type: 'number' } } } })
+  applyPromotions(@RequireChurch() auth: Auth, @Param('id', ParseIntPipe) id: number, @Body() dto: ApplyPromotionDto) {
+    return this.promotions.apply(auth.churchId, id, dto.memberIds);
   }
 }
