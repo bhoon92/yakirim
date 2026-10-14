@@ -92,7 +92,16 @@ flex 가 실제로 배포하는 CSS 번들(`flex.team/landing-static/_next/stati
   (`planning.md` 00.1). 훈련 도메인이 이 위에 통째로 올라가 있다. **세션 4번째 이월.**
   코드를 더 쌓기 전에 맞춰보는 게 비용이 가장 적다
 
-### 2.2 배포 — 조사만 끝났고 아직 안 함
+### 2.2 배포 — Render(웹) + Neon(DB) 로 준비 완료, 계정 작업만 남음 (2026-10-14)
+
+`render.yaml`(Blueprint) 추가. **DB 는 Render 무료 Postgres 를 쓰지 않는다** — 30일 만료·백업 없음. Neon 무료(만료 없음, SSL 필수 → `POSTGRES_DB_SSL=true`).
+스크래치 복제본에서 Render 와 같은 명령으로 빌드 → `NODE_ENV=production` 기동까지 확인했다. 그때 잡은 것:
+**SPA 딥링크 500** — ServeStatic `exclude: ['/api*']` 가 Express 5 문법이 아니라 요청마다 PathError. `'/api/{*path}'` 로 수정.
+
+사용자가 할 일: ① Neon 프로젝트(싱가포르) ② Google OAuth 클라이언트 + 리디렉션 URI ③ Render Blueprint 연결 후 비밀값 입력.
+첫 로그인 → 온보딩에서 교회를 만들면 키퍼스처치 기본값이 시드된다(데모 300명은 없다).
+
+#### (이전 조사 기록)
 코드는 준비돼 있다. `railway.toml`(NIXPACKS), `/api/health`, production 에서만 `setGlobalPrefix('api')`,
 NestJS 가 `apps/web/dist` 를 직접 서빙, `.nvmrc` v22.17.1, pnpm allowBuilds 해결됨.
 

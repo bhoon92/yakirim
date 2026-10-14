@@ -34,7 +34,9 @@ const isProduction = process.env.NODE_ENV === 'production';
       ? [
           ServeStaticModule.forRoot({
             rootPath: join(__dirname, '..', '..', '..', '..', 'apps', 'web', 'dist'),
-            exclude: ['/api*'],
+            // Express 5(path-to-regexp v8) 문법. 예전 '/api*' 는 요청마다 PathError 를 던져
+            // SPA 딥링크(/app/members 새로고침 등)가 전부 500 이었다.
+            exclude: ['/api/{*path}'],
           }),
         ]
       : []),
