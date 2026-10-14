@@ -15,6 +15,7 @@ export const ConfigProvider = {
     username: config.get<string>('postgresql.username'),
     password: config.get<string>('postgresql.password'),
     database: config.get<string>('postgresql.database'),
+    ssl: config.get<boolean>('postgresql.ssl'),
     logger: 'debug',
     logging: true,
     migrationsRun: config.get<boolean>('postgresql.migrationsRun'),

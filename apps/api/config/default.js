@@ -4,10 +4,12 @@ module.exports = {
     type: 'postgresql',
     host: process.env.POSTGRES_DB_HOST,
     roHost: process.env.POSTGRES_DB_HOST_RO || process.env.POSTGRES_DB_HOST,
-    port: 5432,
+    port: Number(process.env.POSTGRES_DB_PORT || 5432),
     username: process.env.POSTGRES_DB_USERNAME,
     password: process.env.POSTGRES_DB_PASSWORD,
     database: process.env.POSTGRES_DB_NAME,
+    // 외부 관리형 Postgres(Neon 등)는 SSL 필수. 로컬은 끈다.
+    ssl: process.env.POSTGRES_DB_SSL === 'true',
     migrationsRun: true,
     entities: ['dist/src/database/entities/*.entity.js', 'dist/src/module/**/*.entity.js'],
     migrations: ['dist/src/database/migration/*.js'],
