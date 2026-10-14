@@ -1,14 +1,24 @@
-export type Role = 'owner' | 'admin' | 'staff' | 'viewer';
+export type Role = 'owner' | 'admin' | 'staff' | 'shepherd' | 'viewer';
 
 export const ROLE_LABEL: Record<Role, string> = {
   owner: '소유자',
   admin: '관리자',
   staff: '실무자',
+  shepherd: '간사',
   viewer: '조회',
 };
 
+/** 역할을 고를 때 옆에 보여줄 한 줄 설명. */
+export const ROLE_HINT: Record<Role, string> = {
+  owner: '모든 권한',
+  admin: '모든 권한 (재정 수정·팀 관리 포함)',
+  staff: '재정 수정·팀 관리 빼고 전부 — 간사·설정까지 관리',
+  shepherd: '교인·출석·훈련·양육기록·달력·갤러리. 설정·간사·선교사 관리는 보기만',
+  viewer: '보기만 (양육기록 제외)',
+};
+
 /** 초대/변경 가능한 역할 (소유자 제외). */
-export const ASSIGNABLE_ROLES: Role[] = ['admin', 'staff', 'viewer'];
+export const ASSIGNABLE_ROLES: Role[] = ['admin', 'staff', 'shepherd', 'viewer'];
 
 export type TeamMember = {
   membershipId: number;

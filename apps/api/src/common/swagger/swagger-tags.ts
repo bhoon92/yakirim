@@ -168,7 +168,7 @@ export const SWAGGER_TAG_DESCRIPTIONS: ReadonlyArray<{ name: string; description
   {
     name: SwaggerTag.TEAM,
     description: [
-      '이 교회를 관리하는 계정(멤버십)과 역할 관리. 역할은 owner / admin / staff / viewer 4종 고정이며',
+      '이 교회를 관리하는 계정(멤버십)과 역할 관리. 역할은 owner / admin / staff / shepherd / viewer 5종 고정이며',
       '역할 → 권한 매핑이 모든 엔드포인트의 403 판정 기준이다.',
     ].join('\n'),
   },

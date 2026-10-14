@@ -4,7 +4,10 @@ import { BaseDateEntityWithDeletedAt } from './base-date.entity';
 export enum MembershipRole {
   OWNER = 'owner',
   ADMIN = 'admin',
+  /** 실무자 — 기획행정처럼 간사·설정까지 관리한다. */
   STAFF = 'staff',
+  /** 간사 — 사역은 하되 설정·간사·선교사 관리는 보기만. */
+  SHEPHERD = 'shepherd',
   VIEWER = 'viewer',
 }
 

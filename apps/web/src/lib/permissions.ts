@@ -23,7 +23,7 @@ export type Permission =
   | 'settings:write'
   | 'team:manage';
 
-export type Role = 'owner' | 'admin' | 'staff' | 'viewer';
+export type Role = 'owner' | 'admin' | 'staff' | 'shepherd' | 'viewer';
 
 const READS: Permission[] = [
   'member:read',
@@ -47,10 +47,21 @@ const SACRED_WRITES: Permission[] = [
   'settings:write',
 ];
 
+/** 간사 — 현장의 쓰기만. 설정·간사·선교사 관리는 보기만 (백엔드 SHEPHERD_WRITES 와 같다). */
+const SHEPHERD_WRITES: Permission[] = [
+  'member:write',
+  'attendance:write',
+  'care:write',
+  'training:write',
+  'calendar:write',
+  'gallery:write',
+];
+
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   owner: [...READS, 'care:read', ...SACRED_WRITES, 'finance:write', 'team:manage'],
   admin: [...READS, 'care:read', ...SACRED_WRITES, 'finance:write', 'team:manage'],
   staff: [...READS, 'care:read', ...SACRED_WRITES],
+  shepherd: [...READS, 'care:read', ...SHEPHERD_WRITES],
   viewer: [...READS],
 };
 

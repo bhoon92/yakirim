@@ -52,7 +52,7 @@ export class TeamController {
   @Permissions('team:manage')
   @ApiOperation({
     summary: '역할 변경',
-    description: 'admin / staff / viewer 사이에서만 변경 가능. **owner 는 대상도 목표값도 될 수 없다**(403) — 교회 소유권 보호.',
+    description: 'admin / staff / shepherd / viewer 사이에서만 변경 가능. **owner 는 대상도 목표값도 될 수 없다**(403) — 교회 소유권 보호.',
   })
   @ApiParam(MEMBERSHIP_ID_PARAM)
   updateRole(

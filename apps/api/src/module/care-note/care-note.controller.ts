@@ -26,7 +26,7 @@ export class CareNoteController {
     description: [
       '해당 교인의 심방·면담·양육·상담·파송보고 기록을 최신순으로 반환한다. 작성자 이름이 함께 온다.',
       '',
-      '**민감 정보**라 viewer 역할은 읽기조차 불가(staff 이상).',
+      '**민감 정보**라 viewer 역할은 읽기조차 불가(shepherd 이상).',
     ].join('\n'),
   })
   list(@RequireChurch() auth: AuthContext & { churchId: number }, @Param('memberId', ParseIntPipe) memberId: number) {

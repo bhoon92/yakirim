@@ -226,7 +226,7 @@ pg 드라이버가 `date` 컬럼을 **JS `Date` 로 주는 경우**(원시 쿼�
   참조처를 반드시 선언할 것 — 안 하면 사용 중인 걸 조용히 지워 이력이 고아가 된다
 - **조직 대분류 이름은 `useOrgLabels()` 훅으로만 읽는다**(4곳에 퍼져 있다)
 
-### 4.4 마이그레이션 (12개, 전부 적용)
+### 4.4 마이그레이션 (13개, 전부 적용)
 ```
 1782000000000  Initial                  손으로 작성. 인덱스·PK·enum 이름을 TypeORM 메타데이터에서 뽑아 맞췄다
 1787815624967  MissionaryStageReference
@@ -240,6 +240,7 @@ pg 드라이버가 `date` 컬럼을 **JS `Date` 로 주는 경우**(원시 쿼�
 1788190000000  TrainingCourseStep       과정에 STEP 번호·수료 시 제안할 재적상태·간사 등록 제안
 1788200000000  EnrollmentPromotionDismissed  수료 제안 넘기기 표시
 1788210000000  MemberShepherd           담당 간사 (성도 1명당 열린 구간 하나)
+1788220000000  ShepherdRole             membership_role_enum 에 shepherd 추가 (down 은 타입 재생성)
 ```
 ⭐ 표시는 **생성기가 만들지 못하는 데이터 마이그레이션**이 들어 있다는 뜻. 건드릴 때 주의.
 `Initial` 의 인덱스 이름 규칙을 깨면 이후 `generate` 가 불필요한 rename diff 를 낸다.

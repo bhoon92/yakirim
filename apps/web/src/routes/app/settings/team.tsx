@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 
 import {
   ASSIGNABLE_ROLES,
+  ROLE_HINT,
   ROLE_LABEL,
   inviteMember,
   linkTeamMember,
@@ -79,7 +80,8 @@ function TeamManager() {
 
 function InviteForm({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<Role>('staff');
+  // 초대받는 사람 대부분이 간사다
+  const [role, setRole] = useState<Role>('shepherd');
   const [error, setError] = useState<string | null>(null);
 
   const inviteMut = useMutation({
@@ -112,6 +114,9 @@ function InviteForm({ onDone }: { onDone: () => void }) {
           </Button>
         </div>
         {error && <p className="text-xs text-rose-600">{error}</p>}
+        <p className="text-xs text-[var(--color-muted-foreground)]">
+          <strong className="font-medium text-[var(--color-foreground)]">{ROLE_LABEL[role]}</strong> — {ROLE_HINT[role]}
+        </p>
         <p className="text-xs text-[var(--color-muted-foreground)]">미가입자는 해당 이메일로 Google 로그인 시 자동으로 합류합니다.</p>
       </CardContent>
     </Card>
@@ -282,7 +287,7 @@ function RoleSelect({ value, onChange, disabled }: { value: Role; onChange: (rol
       className="h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm outline-none focus:border-[var(--color-foreground)] disabled:opacity-50"
     >
       {ASSIGNABLE_ROLES.map(role => (
-        <option key={role} value={role}>
+        <option key={role} value={role} title={ROLE_HINT[role]}>
           {ROLE_LABEL[role]}
         </option>
       ))}

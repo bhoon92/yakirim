@@ -12,7 +12,7 @@ export type Membership = {
   id: number;
   accountId: number;
   churchId: number;
-  role: 'owner' | 'admin' | 'staff' | 'viewer';
+  role: 'owner' | 'admin' | 'staff' | 'shepherd' | 'viewer';
   churchName: string | null;
 };
 
