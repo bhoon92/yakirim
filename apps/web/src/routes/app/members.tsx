@@ -530,7 +530,9 @@ function CreateMemberModal({ onClose, onCreated }: { onClose: () => void; onCrea
                 </button>
               ))}
             </div>
-            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">미선택 시 기본 상태로 등록됩니다. 설정 &gt; 참조에서 관리.</p>
+            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+              미선택 시 첫 단계로 등록됩니다. 단계 목록은 위의 “재적상태·역할”에서 바꿉니다.
+            </p>
           </Field>
 
           {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>}

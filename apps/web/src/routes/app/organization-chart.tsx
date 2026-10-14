@@ -130,7 +130,8 @@ export function OrganizationChartPage() {
                 </option>
               ))}
             </select>
-            {can('settings:write') && (
+            {/* 그 해 조직이 비어 있을 때만 — 교회를 만들면 올해 조직이 시드되므로 늘 실패하는 버튼이었다 */}
+            {can('settings:write') && chart && Object.values(chart).every(units => units.length === 0) && (
               <Button variant="outline" size="sm" onClick={() => copyYear.mutate()} disabled={copyYear.isPending}>
                 <CopyPlus className="size-4" />
                 {year - 1}년 구성 가져오기

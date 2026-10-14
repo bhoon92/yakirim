@@ -144,22 +144,30 @@ export class ShepherdService {
     const lastMap = new Map(lastNotes.map(row => [row.memberId, row.last]));
     const today = todayString();
 
-    return rows
-      .filter(row => memberMap.has(row.memberId))
-      .map(row => {
-        const member = memberMap.get(row.memberId)!;
-        const last = lastMap.get(row.memberId) ?? null;
-        return {
-          memberId: member.id,
-          memberName: member.name,
-          phone: member.phone ?? null,
-          statusName: statusMap.get(member.statusId) ?? null,
-          since: row.startDate,
-          lastCareNoteDate: last,
-          daysSinceContact: daysBetween(last ?? row.startDate, today),
-        };
-      })
-      .sort((a, b) => b.daysSinceContact - a.daysSinceContact || a.memberName.localeCompare(b.memberName, 'ko'));
+    return (
+      rows
+        .filter(row => memberMap.has(row.memberId))
+        .map(row => {
+          const member = memberMap.get(row.memberId)!;
+          const last = lastMap.get(row.memberId) ?? null;
+          return {
+            memberId: member.id,
+            memberName: member.name,
+            phone: member.phone ?? null,
+            statusName: statusMap.get(member.statusId) ?? null,
+            since: row.startDate,
+            lastCareNoteDate: last,
+            daysSinceContact: daysBetween(last ?? row.startDate, today),
+          };
+        })
+        // 기록이 아예 없는 사람이 먼저 — 같은 날수라도 "만난 적 없음"이 "오늘 만남"보다 급하다
+        .sort(
+          (a, b) =>
+            Number(a.lastCareNoteDate !== null) - Number(b.lastCareNoteDate !== null) ||
+            b.daysSinceContact - a.daysSinceContact ||
+            a.memberName.localeCompare(b.memberName, 'ko')
+        )
+    );
   }
 
   /**

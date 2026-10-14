@@ -42,12 +42,17 @@ export class ReferenceService {
 
   async create<T extends RefRow>(entity: EntityClass<T>, churchId: number, dto: UpsertReferenceDto, year?: number): Promise<T> {
     const repo = this.repo(entity);
+    // 정렬순서를 안 주면 맨 끝으로 — 0 으로 두면 같은 0 인 기존 항목들 사이(id 순)에 끼어 앞쪽에 나타났다
+    const last =
+      dto.sortOrder == null
+        ? await repo.findOne({ where: { churchId, ...(year != null ? { year } : {}) } as never, order: { sortOrder: 'DESC' } as never })
+        : null;
     const row = new entity();
     Object.assign(row, {
       churchId,
       name: dto.name,
       description: dto.description,
-      sortOrder: dto.sortOrder ?? 0,
+      sortOrder: dto.sortOrder ?? (last ? last.sortOrder + 1 : 0),
       isActive: dto.isActive ?? true,
       ...(year != null ? { year } : {}),
     });
