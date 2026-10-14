@@ -53,7 +53,8 @@ export class OfferingService {
   }
 
   async remove(churchId: number, id: number): Promise<void> {
-    const result = await this.repo().delete({ id, churchId });
+    // 연말정산 영수증의 근거 기록이라 실제로 지우지 않는다
+    const result = await this.repo().softDelete({ id, churchId });
     if (!result.affected) throw new NotFoundException('Offering not found');
   }
 
