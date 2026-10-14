@@ -1,4 +1,5 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { encryptedText } from '@src/util/token-cipher';
 import { BaseDateEntity } from './base-date.entity';
 
 /** Google Calendar push 연동 — account+church 단위 연결. */
@@ -18,10 +19,10 @@ export class GoogleCalendarConnectionEntity extends BaseDateEntity {
   @Column({ comment: '연결한 구글 계정 이메일' })
   googleEmail!: string;
 
-  @Column({ type: 'text', comment: 'offline refresh token (평문, 암호화 TODO)' })
+  @Column({ type: 'text', comment: 'offline refresh token (AES-256-GCM 암호화)', transformer: encryptedText })
   refreshToken!: string;
 
-  @Column({ type: 'text', nullable: true, comment: '캐시된 access token' })
+  @Column({ type: 'text', nullable: true, comment: '캐시된 access token (AES-256-GCM 암호화)', transformer: encryptedText })
   accessToken?: string | null;
 
   @Column({ type: 'timestamptz', nullable: true, comment: 'access token 만료 시각' })

@@ -34,6 +34,10 @@ module.exports = {
   web: {
     baseUrl: process.env.WEB_BASE_URL || '',
   },
+  tokenEncryption: {
+    // 구글 캘린더 토큰 암호화 키 — 운영에서 한 번 정하면 바꾸지 말 것 (바꾸면 연동을 다시 해야 한다)
+    key: process.env.TOKEN_ENCRYPTION_KEY || '',
+  },
   s3: {
     region: process.env.AWS_REGION || 'ap-northeast-2',
     bucket: process.env.AWS_S3_BUCKET || '',

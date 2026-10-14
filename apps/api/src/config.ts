@@ -39,6 +39,9 @@ export const ConfigProvider = {
   web: {
     baseUrl: config.get<string>('web.baseUrl'),
   },
+  tokenEncryption: {
+    key: config.get<string>('tokenEncryption.key'),
+  },
   s3: {
     region: config.get<string>('s3.region'),
     bucket: config.get<string>('s3.bucket'),

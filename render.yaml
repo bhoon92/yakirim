@@ -38,6 +38,9 @@ services:
         generateValue: true
       - key: JWT_CMS_REFRESH_SECRET_KEY
         generateValue: true
+      # 구글 캘린더 토큰 암호화 키. 한 번 생기면 바꾸지 말 것 — 바꾸면 저장된 연동을 풀 수 없다
+      - key: TOKEN_ENCRYPTION_KEY
+        generateValue: true
       # 없으면 부팅이 실패한다 — GoogleStrategy 가 시작할 때 만들어진다 (HANDOFF §2.2)
       - key: GOOGLE_CLIENT_ID
         sync: false
