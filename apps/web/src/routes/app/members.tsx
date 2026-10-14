@@ -102,19 +102,20 @@ export function MembersPage() {
         actions={
           <>
             {can('settings:write') && (
-              <Button variant="outline" onClick={() => setManaging(true)}>
+              <Button variant="outline" onClick={() => setManaging(true)} aria-label="재적상태·역할" title="재적상태·역할">
                 <Settings2 />
-                재적상태·역할
+                {/* 폰에서는 아이콘만 — 버튼 넷이 두 줄을 차지해 목록이 첫 화면 아래로 밀렸다 */}
+                <span className="hidden sm:inline">재적상태·역할</span>
               </Button>
             )}
-            <Button variant="outline" onClick={() => void exportMembers()}>
+            <Button variant="outline" onClick={() => void exportMembers()} aria-label="내보내기" title="내보내기">
               <Download />
-              내보내기
+              <span className="hidden sm:inline">내보내기</span>
             </Button>
             {can('member:write') && (
-              <Button variant="outline" onClick={() => setImporting(true)}>
+              <Button variant="outline" onClick={() => setImporting(true)} aria-label="가져오기" title="가져오기">
                 <Upload />
-                가져오기
+                <span className="hidden sm:inline">가져오기</span>
               </Button>
             )}
             {can('member:write') && (
@@ -147,8 +148,10 @@ export function MembersPage() {
             className="pl-10"
           />
         </div>
-        <AffiliationFilter value={affiliation} onChange={changeAffiliation} />
-        <ShepherdFilter value={shepherd} onChange={changeShepherd} />
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+          <AffiliationFilter value={affiliation} onChange={changeAffiliation} />
+          <ShepherdFilter value={shepherd} onChange={changeShepherd} />
+        </div>
       </div>
 
       <FilterChips active={statusId} onChange={changeStatus} counts={data?.counts} />
@@ -201,7 +204,7 @@ function ShepherdFilter({ value, onChange }: { value: number | 'none' | null; on
         const raw = event.target.value;
         onChange(raw === '' ? null : raw === 'none' ? 'none' : Number(raw));
       }}
-      className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-foreground)] sm:w-40"
+      className="h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-foreground)] sm:w-40"
     >
       <option value="">담당 전체</option>
       <option value="none">담당 없음</option>
@@ -243,7 +246,7 @@ function AffiliationFilter({
         const [kind, id] = raw.split(':');
         onChange({ kind: kind as AffiliationKind, id: Number(id) });
       }}
-      className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-foreground)] sm:w-48"
+      className="h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-foreground)] sm:w-48"
     >
       <option value="">소속 전체</option>
       {groups.map(group =>
@@ -274,8 +277,9 @@ function FilterChips({
     { key: null, label: '전체', count: counts?.all },
     ...(counts?.byStatus ?? []).map(status => ({ key: status.id, label: status.name, count: status.count })),
   ];
+  // 폰에서는 한 줄 가로 스크롤 — 상태가 열 개라 줄바꿈하면 세 줄을 차지한다
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
       {chips.map(chip => {
         const isActive = active === chip.key;
         return (
@@ -283,7 +287,7 @@ function FilterChips({
             key={chip.key ?? 'all'}
             onClick={() => onChange(chip.key)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+              'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
               isActive
                 ? 'border-transparent bg-[var(--color-foreground)] text-[var(--color-background)]'
                 : 'border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]'

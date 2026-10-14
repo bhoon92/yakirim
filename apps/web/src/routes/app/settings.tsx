@@ -23,7 +23,7 @@ const SECTIONS: SettingSection[] = [
   {
     icon: Users2,
     title: '팀원 / 권한',
-    description: '이메일로 팀원을 초대하고 역할(소유자/관리자/실무자/조회)을 부여합니다.',
+    description: '이메일로 팀원을 초대하고 역할(소유자/관리자/실무자/간사/조회)을 부여하고, 계정을 교인과 연결합니다.',
     hint: 'OWNER·ADMIN 전용',
     to: '/app/settings/team',
   },

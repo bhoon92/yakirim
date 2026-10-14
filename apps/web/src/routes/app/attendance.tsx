@@ -104,7 +104,8 @@ function AttendanceBoard({
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* 폰에서도 한 줄 — 세로로 쌓으면 출석 체크 목록이 두 번째 화면으로 밀린다 */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <StatCard label="출석" value={`${roster?.present ?? 0}`} suffix={`/ ${roster?.total ?? 0}`} />
         <StatCard label="출석률" value={`${roster?.rate ?? 0}%`} />
         <StatCard label="결석" value={`${(roster?.total ?? 0) - (roster?.present ?? 0)}`} />
@@ -187,9 +188,9 @@ function AttendanceRow({ item, worshipServiceId, date }: { item: RosterItem; wor
 function StatCard({ label, value, suffix }: { label: string; value: string; suffix?: string }) {
   return (
     <Card>
-      <CardContent className="p-5">
+      <CardContent className="p-3 sm:p-5">
         <div className="text-xs text-[var(--color-muted-foreground)]">{label}</div>
-        <div className="mt-1 text-2xl font-semibold tabular-nums">
+        <div className="mt-1 text-lg font-semibold tabular-nums sm:text-2xl">
           {value}
           {suffix && <span className="ml-1 text-sm font-normal text-[var(--color-muted-foreground)]">{suffix}</span>}
         </div>

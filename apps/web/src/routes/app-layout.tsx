@@ -10,6 +10,7 @@ import {
   Images,
   LayoutDashboard,
   LogOut,
+  Menu,
   Network,
   Search,
   Settings,
@@ -343,31 +344,92 @@ function MobileHeader() {
 
 function MobileTabBar() {
   const location = useLocation();
-  // 모바일 하단 탭은 5개로 제한 (나머지는 데스크탑 사이드바에서)
-  const tabs = useNavGroups()
-    .flatMap(group => group.items)
-    .slice(0, 5);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const groups = useNavGroups();
+  // 하단 탭은 4개 + 더보기. 나머지 메뉴(출석·달력·재정·설정 …)는 더보기 시트에서 — 예전에는 5개만 두고 나머지로 갈 길이 없었다
+  const tabs = groups.flatMap(group => group.items).slice(0, 4);
+  const inTabs = tabs.some(item => isActive(item, location.pathname));
 
   return (
-    <nav className="sticky bottom-0 z-10 grid grid-cols-5 border-t border-[var(--color-border)] bg-[var(--color-background)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-      {tabs.map(item => {
-        const active = isActive(item, location.pathname);
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.to}
-            to={item.to}
-            className={cn(
-              'flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors',
-              active ? 'text-[var(--color-foreground)]' : 'text-[var(--color-muted-foreground)]'
-            )}
-          >
-            <Icon className="size-5" />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <>
+      <nav className="sticky bottom-0 z-10 grid grid-cols-5 border-t border-[var(--color-border)] bg-[var(--color-background)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+        {tabs.map(item => {
+          const active = isActive(item, location.pathname);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={cn(
+                'flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors',
+                active ? 'text-[var(--color-foreground)]' : 'text-[var(--color-muted-foreground)]'
+              )}
+            >
+              <Icon className="size-5" />
+              <span className="max-w-full truncate px-1">{item.label}</span>
+            </Link>
+          );
+        })}
+        <button
+          onClick={() => setMoreOpen(true)}
+          className={cn(
+            'flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors',
+            !inTabs ? 'text-[var(--color-foreground)]' : 'text-[var(--color-muted-foreground)]'
+          )}
+        >
+          <Menu className="size-5" />
+          더보기
+        </button>
+      </nav>
+      {moreOpen && <MoreSheet groups={groups} onClose={() => setMoreOpen(false)} />}
+    </>
+  );
+}
+
+/** 모바일 전체 메뉴 — 아래에서 올라오는 시트. 노션 모바일의 사이드바처럼 데스크탑 사이드바와 같은 묶음을 그대로 보여준다. */
+function MoreSheet({ groups, onClose }: { groups: NavGroup[]; onClose: () => void }) {
+  const location = useLocation();
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-black/30 md:hidden" onClick={onClose}>
+      <motion.div
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        className="max-h-[80svh] w-full overflow-y-auto rounded-t-2xl bg-[var(--color-background)] px-3 pt-2 pb-[calc(env(safe-area-inset-bottom)+12px)]"
+        onClick={event => event.stopPropagation()}
+      >
+        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-[var(--color-border)]" />
+        <nav className="flex flex-col gap-3">
+          {groups.map((group, index) => (
+            <div key={group.label ?? `group-${index}`} className="flex flex-col gap-0.5">
+              {group.label && (
+                <div className="px-2.5 pb-1 text-[11px] font-semibold text-[var(--color-muted-foreground)]">{group.label}</div>
+              )}
+              {group.items.map(item => (
+                <div key={item.to} onClick={onClose}>
+                  <SidebarLink item={item} active={isActive(item, location.pathname)} />
+                </div>
+              ))}
+            </div>
+          ))}
+          <div className="border-t border-[var(--color-border)] pt-2" onClick={onClose}>
+            <SidebarLink
+              item={{ to: '/app/settings', label: '설정', icon: Settings }}
+              active={location.pathname.startsWith('/app/settings')}
+            />
+          </div>
+        </nav>
+      </motion.div>
+    </div>
   );
 }
 

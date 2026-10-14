@@ -24,7 +24,7 @@ export function FinancePage() {
     <div className="space-y-6">
       <PageHeader eyebrow="재정" title="재정 관리" description="개인 헌금과 운영 예산을 한 곳에서 관리합니다." />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-3 sm:gap-4">
         <SummaryCard label="이번 달 헌금" value={formatKRW(dashboard?.thisMonthOffering ?? 0)} hint={dashboard?.month} />
         <SummaryCard label="이번 달 지출" value={formatKRW(dashboard?.thisMonthExpense ?? 0)} hint={dashboard?.month} />
         <SummaryCard
@@ -63,10 +63,14 @@ export function FinancePage() {
 function SummaryCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <Card>
-      <CardContent className="p-5">
-        <div className="text-xs text-[var(--color-muted-foreground)]">{label}</div>
-        <div className="mt-1.5 text-2xl font-semibold tabular-nums">{value}</div>
-        {hint && <div className="mt-2 text-xs text-[var(--color-muted-foreground)]">{hint}</div>}
+      {/* 폰에서는 한 줄(이름 왼쪽 · 금액 오른쪽) — 금액이 길어 세 칸 나란히는 안 들어가고, 큰 카드 셋을 쌓으면 화면 하나가 다 찬다 */}
+      <CardContent className="flex items-baseline justify-between gap-3 p-3.5 sm:block sm:p-5">
+        <div className="min-w-0">
+          <div className="text-xs text-[var(--color-muted-foreground)]">{label}</div>
+          {hint && <div className="mt-0.5 text-[11px] text-[var(--color-muted-foreground)] sm:hidden">{hint}</div>}
+        </div>
+        <div className="shrink-0 text-lg font-semibold tabular-nums sm:mt-1.5 sm:text-2xl">{value}</div>
+        {hint && <div className="mt-2 hidden text-xs text-[var(--color-muted-foreground)] sm:block">{hint}</div>}
       </CardContent>
     </Card>
   );
