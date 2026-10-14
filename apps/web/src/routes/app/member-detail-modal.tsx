@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { assignAffiliation, type AffiliationKind, endAffiliation, setAffiliationLeader } from '@/api/affiliations';
 import { fetchMember, updateMember, type AffiliationSummary, type PositionHistoryEntry } from '@/api/members';
 import { endCurrentPosition, promotePosition } from '@/api/positions';
+import { listResidents } from '@/api/residents';
+import { fetchMemberShepherd, setMemberShepherd } from '@/api/shepherds';
 import { listReferences, type Reference } from '@/api/references';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -73,6 +75,8 @@ export function MemberDetailModal({ memberId, onClose }: { memberId: number; onC
               {KINDS.map(kind => (
                 <AffiliationSection key={kind} kind={kind} memberId={memberId} items={affiliationsByKind(member.affiliations, kind)} />
               ))}
+
+              <ShepherdSection memberId={memberId} />
 
               <div className="border-t border-[var(--color-border)] pt-5">
                 <CareNoteSection memberId={memberId} />
@@ -568,6 +572,76 @@ function PositionSection({
             </ul>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 담당 간사 — 이 성도를 누가 맡아 양육하는지. 한 명만 둔다.
+ * 바꾸면 이전 담당 구간이 닫혀 이력으로 남는다 (재적상태 이력과 같은 방식).
+ */
+function ShepherdSection({ memberId }: { memberId: number }) {
+  const queryClient = useQueryClient();
+  const { can } = usePermissions();
+  const canWrite = can('member:write');
+
+  const { data } = useQuery({ queryKey: ['member', memberId, 'shepherd'], queryFn: () => fetchMemberShepherd(memberId) });
+  const { data: residents = [] } = useQuery({
+    queryKey: ['residents', 'for-shepherd'],
+    queryFn: () => listResidents({ scope: 'active' }),
+    enabled: canWrite,
+  });
+
+  const setMut = useMutation({
+    mutationFn: (residentId: number | null) => setMemberShepherd(memberId, residentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['member', memberId, 'shepherd'] });
+      queryClient.invalidateQueries({ queryKey: ['members'] });
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
+      queryClient.invalidateQueries({ queryKey: ['flock'] });
+    },
+    onError: (error: Error) => alert(`담당 변경 실패: ${error.message}`),
+  });
+
+  const current = data?.current ?? null;
+  const past = (data?.history ?? []).filter(row => row.endDate !== null);
+  // 자기 자신은 자기 담당이 될 수 없다. 지금 담당이 공동체를 떠났어도 선택지에는 남긴다.
+  const options = residents.filter(resident => resident.memberId !== memberId);
+  const currentMissing = current && !options.some(resident => resident.id === current.residentId);
+
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-semibold">담당 간사</h3>
+      <div className="flex flex-wrap items-center gap-2">
+        {canWrite ? (
+          <select
+            value={current?.residentId ?? ''}
+            disabled={setMut.isPending}
+            onChange={event => setMut.mutate(event.target.value === '' ? null : Number(event.target.value))}
+            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-sm"
+          >
+            <option value="">담당 없음</option>
+            {currentMissing && <option value={current.residentId}>{current.residentName}</option>}
+            {options.map(resident => (
+              <option key={resident.id} value={resident.id}>
+                {resident.memberName}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="text-sm">{current?.residentName ?? '담당 없음'}</span>
+        )}
+        {current && <span className="text-xs tabular-nums text-[var(--color-muted-foreground)]">{current.startDate}부터</span>}
+      </div>
+      {past.length > 0 && (
+        <p className="mt-1.5 text-[11px] text-[var(--color-muted-foreground)]">
+          이전 담당 ·{' '}
+          {past
+            .slice(0, 3)
+            .map(row => `${row.residentName ?? '(삭제된 간사)'} (${row.startDate} ~ ${row.endDate})`)
+            .join(' · ')}
+        </p>
       )}
     </div>
   );

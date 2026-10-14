@@ -51,6 +51,8 @@ export type Resident = {
   duties: ResidentDuty[];
   /** 과정별 대표 상태. 들은 적 없는 과정은 빠진다. */
   training: { courseId: number; status: EnrollmentStatus }[];
+  /** 지금 맡은 성도 수. */
+  flockCount: number;
 };
 
 export type ResidentDuty = { id: number; name: string };

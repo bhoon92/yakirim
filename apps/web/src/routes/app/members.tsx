@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { createMember, listMembers, type AffiliationKind, type Member, type MemberAffiliationTag, type MemberCounts } from '@/api/members';
+import { listResidents } from '@/api/residents';
 import { listReferences, type Reference } from '@/api/references';
 import { exportMembers } from '@/api/exports';
 import { usePermissions } from '@/lib/permissions';
@@ -36,6 +37,8 @@ export function MembersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusId, setStatusId] = useState<number | null>(null);
   const [affiliation, setAffiliation] = useState<AffiliationSelection | null>(null);
+  // 담당 간사 필터: null = 전체, 'none' = 담당 없음, 숫자 = 그 간사가 맡은 사람
+  const [shepherd, setShepherd] = useState<number | 'none' | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [openMemberId, setOpenMemberId] = useState<number | null>(null);
   const [managing, setManaging] = useState(false);
@@ -64,6 +67,10 @@ export function MembersPage() {
     setAffiliation(value);
     setPage(1);
   };
+  const changeShepherd = (value: number | 'none' | null) => {
+    setShepherd(value);
+    setPage(1);
+  };
   const clearStalled = () => {
     searchParams.delete('stalled');
     setSearchParams(searchParams, { replace: true });
@@ -71,7 +78,7 @@ export function MembersPage() {
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['members', { q: debouncedQuery, statusId, affiliation, stalledOnly, page }],
+    queryKey: ['members', { q: debouncedQuery, statusId, affiliation, stalledOnly, shepherd, page }],
     queryFn: () =>
       listMembers({
         q: debouncedQuery || undefined,
@@ -79,6 +86,8 @@ export function MembersPage() {
         affiliationKind: affiliation?.kind,
         affiliationId: affiliation?.id,
         stalled: stalledOnly || undefined,
+        shepherdResidentId: typeof shepherd === 'number' ? shepherd : undefined,
+        noShepherd: shepherd === 'none' || undefined,
         page,
       }),
     placeholderData: keepPreviousData,
@@ -139,6 +148,7 @@ export function MembersPage() {
           />
         </div>
         <AffiliationFilter value={affiliation} onChange={changeAffiliation} />
+        <ShepherdFilter value={shepherd} onChange={changeShepherd} />
       </div>
 
       <FilterChips active={statusId} onChange={changeStatus} counts={data?.counts} />
@@ -177,6 +187,32 @@ export function MembersPage() {
 
       {openMemberId !== null && <MemberDetailModal memberId={openMemberId} onClose={() => setOpenMemberId(null)} />}
     </div>
+  );
+}
+
+/** 담당 간사로 거르기 — "이 간사가 맡은 사람", "아직 담당이 없는 사람"(배정할 사람 찾기). */
+function ShepherdFilter({ value, onChange }: { value: number | 'none' | null; onChange: (value: number | 'none' | null) => void }) {
+  const { data: residents = [] } = useQuery({ queryKey: ['residents', 'for-shepherd'], queryFn: () => listResidents({ scope: 'active' }) });
+  if (residents.length === 0 && value === null) return null;
+  return (
+    <select
+      value={value === null ? '' : String(value)}
+      onChange={event => {
+        const raw = event.target.value;
+        onChange(raw === '' ? null : raw === 'none' ? 'none' : Number(raw));
+      }}
+      className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm text-[var(--color-foreground)] sm:w-40"
+    >
+      <option value="">담당 전체</option>
+      <option value="none">담당 없음</option>
+      <optgroup label="담당 간사">
+        {residents.map(resident => (
+          <option key={resident.id} value={resident.id}>
+            {resident.memberName} ({resident.flockCount})
+          </option>
+        ))}
+      </optgroup>
+    </select>
   );
 }
 
@@ -297,7 +333,7 @@ function MemberTags({ member }: { member: Member }) {
     }
   }
 
-  if (tags.length === 0) return null;
+  if (tags.length === 0 && !member.shepherd) return null;
 
   // 한 행이 태그로 넘치지 않게 자른다 — 자세한 건 상세에서 본다.
   const shown = tags.slice(0, 5);
@@ -316,6 +352,12 @@ function MemberTags({ member }: { member: Member }) {
         />
       ))}
       {rest > 0 && <span className="text-[11px] text-[var(--color-muted-foreground)]">+{rest}</span>}
+      {/* 담당은 색 태그가 아니라 글자로 — 조직(색)과 다른 종류의 정보라 섞이지 않게 */}
+      {member.shepherd && (
+        <span className="text-[11px] text-[var(--color-muted-foreground)]" title="담당 간사">
+          담당 {member.shepherd.name}
+        </span>
+      )}
     </div>
   );
 }

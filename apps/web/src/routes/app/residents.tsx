@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { CareNoteSection } from './care-note-section';
 import { MemberDetailModal } from './member-detail-modal';
 import { ResidentDutyPicker } from './resident-duty-picker';
+import { ResidentFlockSection } from './resident-flock-section';
 import { ResidentStatusManagerModal } from './resident-status-manager';
 
 /**
@@ -167,6 +168,9 @@ export function ResidentsPage() {
                       <span className="font-semibold">{resident.memberName}</span>
                       <StatusBadge resident={resident} />
                       <span className="text-xs tabular-nums text-[var(--color-muted-foreground)]">{tenureLabel(resident)}</span>
+                      {resident.flockCount > 0 && (
+                        <span className="text-xs tabular-nums text-[var(--color-muted-foreground)]">· 성도 {resident.flockCount}명</span>
+                      )}
                     </div>
                     <ResidentTags resident={resident} />
                     <div className="mt-1.5">
@@ -431,7 +435,9 @@ function ResidentDetailModal({
   const queryClient = useQueryClient();
   const { can } = usePermissions();
   const canWrite = can('resident:write');
-  const [memberCardOpen, setMemberCardOpen] = useState(false);
+  // 교인 카드 — 간사 자신의 카드 또는 맡은 성도의 카드
+  const [memberCardId, setMemberCardId] = useState<number | null>(null);
+  const memberCardOpen = memberCardId !== null;
 
   const { data: resident, isLoading } = useQuery({ queryKey: ['resident', id], queryFn: () => fetchResidentDetail(id) });
 
@@ -485,7 +491,7 @@ function ResidentDetailModal({
             </div>
             <div className="flex shrink-0 items-center gap-1">
               {resident && (
-                <Button size="sm" variant="ghost" onClick={() => setMemberCardOpen(true)}>
+                <Button size="sm" variant="ghost" onClick={() => resident && setMemberCardId(resident.memberId)}>
                   <SquareArrowOutUpRight className="size-3.5" />
                   교인 카드
                 </Button>
@@ -532,12 +538,14 @@ function ResidentDetailModal({
                   <ResidentTags resident={resident} />
                   <p className="text-[11px] text-[var(--color-muted-foreground)]">
                     배정·변경은{' '}
-                    <button className="underline underline-offset-2" onClick={() => setMemberCardOpen(true)}>
+                    <button className="underline underline-offset-2" onClick={() => resident && setMemberCardId(resident.memberId)}>
                       교인 카드
                     </button>
                     에서 합니다. 소속 이력이 교인 쪽에 쌓여 조직도·출석과 함께 맞춰집니다.
                   </p>
                 </section>
+
+                <ResidentFlockSection residentId={resident.id} residentMemberId={resident.memberId} onOpenMember={setMemberCardId} />
 
                 <StatusEditor
                   key={resident.statusId ?? 'none'}
@@ -628,11 +636,11 @@ function ResidentDetailModal({
         </div>
       </div>
 
-      {memberCardOpen && resident && (
+      {memberCardId !== null && (
         <MemberDetailModal
-          memberId={resident.memberId}
+          memberId={memberCardId}
           onClose={() => {
-            setMemberCardOpen(false);
+            setMemberCardId(null);
             // 교인 카드에서 바꾼 소속·역할이 간사 목록 태그에 바로 보이게
             invalidate();
           }}

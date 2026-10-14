@@ -21,6 +21,7 @@ import { OrganizationChartModule } from './module/organization-chart/organizatio
 import { MemberPositionModule } from './module/position/member-position.module';
 import { ReferenceModule } from './module/reference/reference.module';
 import { ResidentModule } from './module/resident/resident.module';
+import { ShepherdModule } from './module/shepherd/shepherd.module';
 import { TeamModule } from './module/team/team.module';
 import { TrainingModule } from './module/training/training.module';
 
@@ -40,6 +41,7 @@ const isProduction = process.env.NODE_ENV === 'production';
     AuthModule,
     ChurchModule,
     ResidentModule,
+    ShepherdModule,
     MemberModule,
     TrainingModule,
     MissionaryModule,

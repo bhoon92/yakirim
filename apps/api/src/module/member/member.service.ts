@@ -5,6 +5,7 @@ import { MemberEntity } from '@src/database/entities/member.entity';
 import { MemberStatusEntity } from '@src/database/entities/member-status.entity';
 import { AffiliationService, type AffiliationTagSet } from '@src/module/affiliation/affiliation.service';
 import { MemberPositionService } from '@src/module/position/member-position.service';
+import { ShepherdService, type ShepherdTag } from '@src/module/shepherd/shepherd.service';
 import { MemberStatusHistoryService } from './member-status-history.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { ListMemberQueryDto } from './dto/list-member.dto';
@@ -18,6 +19,8 @@ export type MemberView = MemberEntity &
     statusName: string | null;
     /** 현재 사역 역할. 없으면 null */
     position: { id: number; name: string | null } | null;
+    /** 지금 담당 간사. 없으면 null */
+    shepherd: ShepherdTag | null;
   };
 
 @Injectable()
@@ -25,7 +28,8 @@ export class MemberService {
   constructor(
     private readonly affiliations: AffiliationService,
     private readonly positions: MemberPositionService,
-    private readonly statusHistory: MemberStatusHistoryService
+    private readonly statusHistory: MemberStatusHistoryService,
+    private readonly shepherds: ShepherdService
   ) {}
 
   private repo() {
@@ -80,6 +84,15 @@ export class MemberService {
       );
     }
 
+    // 담당 간사 필터 — "이 간사가 맡은 사람" / "아직 담당이 없는 사람"
+    const openShepherd = `SELECT 1 FROM member_shepherd sh
+       WHERE sh.member_id = m.id AND sh.church_id = m.church_id AND sh.end_date IS NULL AND sh.deleted_at IS NULL`;
+    if (query.shepherdResidentId) {
+      qb.andWhere(`EXISTS (${openShepherd} AND sh.resident_id = :shepherdResidentId)`, { shepherdResidentId: query.shepherdResidentId });
+    } else if (query.noShepherd) {
+      qb.andWhere(`NOT EXISTS (${openShepherd})`);
+    }
+
     qb.orderBy('m.createdAt', 'DESC')
       .skip((page - 1) * pageSize)
       .take(pageSize);
@@ -88,16 +101,18 @@ export class MemberService {
     const memberIds = items.map(member => member.id);
 
     // 역할·소속은 성도별로 부르면 20행에 60번 질의가 나간다 → 배치 조회로 한 번씩만.
-    const [statusMap, positionByMember, affiliationsByMember] = await Promise.all([
+    const [statusMap, positionByMember, affiliationsByMember, shepherdByMember] = await Promise.all([
       this.statusMap(churchId),
       this.positions.currentForMembers(churchId, memberIds),
       this.affiliations.currentForMembers(churchId, memberIds),
+      this.shepherds.currentForMembers(churchId, memberIds),
     ]);
 
     const view: MemberView[] = items.map(member => ({
       ...member,
       statusName: statusMap.get(member.statusId)?.name ?? null,
       position: positionByMember.get(member.id) ?? null,
+      shepherd: shepherdByMember.get(member.id) ?? null,
       ...(affiliationsByMember.get(member.id) ?? { departments: [], ministries: [], smallGroups: [] }),
     }));
     const counts = await this.countByStatus(churchId, query.q, affiliationMemberIds, statusMap);

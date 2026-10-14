@@ -35,6 +35,19 @@ export class ListMemberQueryDto {
   @IsBoolean()
   stalled?: boolean;
 
+  /** 담당 간사(resident id) 필터. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  shepherdResidentId?: number;
+
+  /** `true` 면 담당 간사가 없는 교인만. */
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  noShepherd?: boolean;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()

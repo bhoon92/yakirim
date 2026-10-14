@@ -14,6 +14,7 @@ import { todayString } from '@src/common/date';
 import { AffiliationService, type AffiliationTag } from '@src/module/affiliation/affiliation.service';
 import { MemberStatusHistoryService } from '@src/module/member/member-status-history.service';
 import { MemberPositionService } from '@src/module/position/member-position.service';
+import { ShepherdService } from '@src/module/shepherd/shepherd.service';
 import { ResidentDutyService, type ResidentDutyTag } from './resident-duty.service';
 import { CreateResidentDto, ListResidentQueryDto, UpdateResidentDto } from './dto/resident.dto';
 
@@ -40,6 +41,8 @@ export type ResidentItem = {
   /** 맡은 사역 — 노션 다중 선택처럼 간사 화면에서 바로 붙이고 뗀다. */
   duties: ResidentDutyTag[];
   training: ResidentTrainingStep[];
+  /** 지금 맡은 성도 수. */
+  flockCount: number;
 };
 
 export type ResidentHistoryItem = {
@@ -68,7 +71,8 @@ export class ResidentService {
     private readonly statusHistory: MemberStatusHistoryService,
     private readonly affiliations: AffiliationService,
     private readonly positions: MemberPositionService,
-    private readonly duties: ResidentDutyService
+    private readonly duties: ResidentDutyService,
+    private readonly shepherds: ShepherdService
   ) {}
 
   private repo() {
@@ -217,6 +221,8 @@ export class ResidentService {
     await DataSources.instance.transaction(async manager => {
       await manager.getRepository(ResidentStatusHistoryEntity).softDelete({ churchId, residentId: id });
       await manager.getRepository(ResidentDutyAssignmentEntity).softDelete({ churchId, residentId: id });
+      // 맡던 성도는 "담당 없음"으로 돌아온다 (구간은 닫혀 이력에 남는다)
+      await this.shepherds.endAllFor(manager, churchId, id);
       await manager.getRepository(ResidentProfileEntity).softDelete({ id, churchId });
     });
   }
@@ -287,7 +293,7 @@ export class ResidentService {
     if (profiles.length === 0) return [];
     const memberIds = profiles.map(profile => profile.memberId);
 
-    const [members, statuses, affiliations, positions, training, duties] = await Promise.all([
+    const [members, statuses, affiliations, positions, training, duties, flockCounts] = await Promise.all([
       DataSources.instance.getRepository(MemberEntity).find({ where: { churchId, id: In(memberIds) } }),
       preloadedStatuses ? Promise.resolve(preloadedStatuses) : this.statusRepo().find({ where: { churchId } }),
       this.affiliations.currentForMembers(churchId, memberIds),
@@ -297,6 +303,7 @@ export class ResidentService {
         churchId,
         profiles.map(profile => profile.id)
       ),
+      this.shepherds.countsByResident(churchId),
     ]);
     const memberMap = new Map(members.map(member => [member.id, member]));
     const statusMap = new Map(statuses.map(status => [status.id, status]));
@@ -321,6 +328,7 @@ export class ResidentService {
         ministries: tags?.ministries ?? [],
         position: positions.get(profile.memberId) ?? null,
         duties: duties.get(profile.id) ?? [],
+        flockCount: flockCounts.get(profile.id) ?? 0,
         training: training.get(profile.memberId) ?? [],
       };
     });
