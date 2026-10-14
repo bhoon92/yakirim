@@ -6,6 +6,7 @@ import { CareNoteEntity } from '@src/database/entities/care-note.entity';
 import { MemberShepherdEntity } from '@src/database/entities/member-shepherd.entity';
 import { MemberStatusEntity } from '@src/database/entities/member-status.entity';
 import { MemberEntity } from '@src/database/entities/member.entity';
+import { MembershipEntity } from '@src/database/entities/membership.entity';
 import { ResidentProfileEntity } from '@src/database/entities/resident-profile.entity';
 
 /** 목록 태그용 — 이 성도의 지금 담당. */
@@ -159,6 +160,20 @@ export class ShepherdService {
         };
       })
       .sort((a, b) => b.daysSinceContact - a.daysSinceContact || a.memberName.localeCompare(b.memberName, 'ko'));
+  }
+
+  /**
+   * 로그인한 계정의 "내가 맡은 사람". 계정 ↔ 교인 연결이 없거나 그 교인이 간사가 아니면 residentId 가 null 이다
+   * (화면은 그때 무엇을 해야 하는지 안내한다).
+   */
+  async forAccount(churchId: number, accountId: number): Promise<{ residentId: number | null; flock: FlockMember[] }> {
+    const membership = await DataSources.instance.getRepository(MembershipEntity).findOne({ where: { accountId, churchId } });
+    if (!membership?.memberId) return { residentId: null, flock: [] };
+    const resident = await DataSources.instance
+      .getRepository(ResidentProfileEntity)
+      .findOne({ where: { churchId, memberId: membership.memberId } });
+    if (!resident) return { residentId: null, flock: [] };
+    return { residentId: resident.id, flock: await this.flock(churchId, resident.id) };
   }
 
   /** 간사 이름 = 그 간사 교인의 이름. 지운 간사도 이력에는 이름이 보이도록 withDeleted. */

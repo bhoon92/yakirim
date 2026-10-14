@@ -19,6 +19,19 @@ type Auth = AuthContext & { churchId: number };
 export class ShepherdController {
   constructor(private readonly shepherds: ShepherdService) {}
 
+  @Get('me')
+  @Permissions('member:read')
+  @ApiOperation({
+    summary: '내가 맡은 사람',
+    description: [
+      '로그인한 계정이 간사이면 그 간사가 맡은 성도 (연락 오래된 순). `{ residentId, flock }`.',
+      '계정 ↔ 교인 연결(팀 화면)이 없거나 연결된 교인이 간사가 아니면 `residentId: null`.',
+    ].join('\n'),
+  })
+  mine(@RequireChurch() auth: Auth) {
+    return this.shepherds.forAccount(auth.churchId, auth.accountId);
+  }
+
   @Get('members/:memberId')
   @Permissions('member:read')
   @ApiOperation({ summary: '성도의 담당 간사', description: '`{ current, history }`. 담당이 없으면 `current: null`. 이력은 최근 먼저.' })

@@ -7,7 +7,7 @@ import { Permissions } from '@src/module/auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '@src/module/auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '@src/module/auth/guards/permissions.guard';
 import type { AuthContext } from '@src/module/auth/types/auth-context';
-import { InviteMemberDto, UpdateRoleDto } from './dto/team.dto';
+import { InviteMemberDto, LinkMemberDto, UpdateRoleDto } from './dto/team.dto';
 import { TeamService } from './team.service';
 
 const MEMBERSHIP_ID_PARAM = { name: 'membershipId', description: '멤버십 id (accountId 가 아님)', type: Number } as const;
@@ -61,6 +61,24 @@ export class TeamController {
     @Body() dto: UpdateRoleDto
   ) {
     return this.team.updateRole(auth.churchId, membershipId, dto.role);
+  }
+
+  @Patch(':membershipId/member')
+  @Permissions('team:manage')
+  @ApiOperation({
+    summary: '계정 ↔ 교인 연결',
+    description: [
+      '이 계정이 교인 명부의 누구인지 정한다. 간사의 "내가 맡은 사람" 화면이 이 연결로 그 사람을 찾는다.',
+      '한 교인은 한 계정에만 연결된다 (다른 계정에 연결돼 있으면 409). `memberId: null` 이면 해제.',
+    ].join('\n'),
+  })
+  @ApiParam(MEMBERSHIP_ID_PARAM)
+  linkMember(
+    @RequireChurch() auth: AuthContext & { churchId: number },
+    @Param('membershipId', ParseIntPipe) membershipId: number,
+    @Body() dto: LinkMemberDto
+  ) {
+    return this.team.linkMember(auth.churchId, membershipId, dto.memberId);
   }
 
   @Delete(':membershipId')

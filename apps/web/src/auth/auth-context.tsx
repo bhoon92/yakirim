@@ -30,6 +30,8 @@ export type MeResponse = {
   memberships: Membership[];
   currentChurch: CurrentChurch | null;
   role: Membership['role'] | null;
+  /** 이 교회에서 이 계정이 명부의 누구인지 (팀 화면에서 연결). residentId 가 있으면 간사. */
+  self: { memberId: number; memberName: string; residentId: number | null } | null;
 };
 
 /**

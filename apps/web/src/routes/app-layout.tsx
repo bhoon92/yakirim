@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Globe2,
   GraduationCap,
+  HeartHandshake,
   HelpCircle,
   Home,
   Images,
@@ -67,10 +68,17 @@ const NAV_GROUPS: NavGroup[] = [
   { label: '운영', items: [{ to: '/app/finance', label: '재정', icon: Wallet }] },
 ];
 
-const ALL_NAV = NAV_GROUPS.flatMap(group => group.items);
+/** 간사로 연결된 계정에만 보이는 개인 메뉴 — 노션 사이드바 맨 위의 내 공간처럼. */
+const MY_FLOCK: NavItem = { to: '/app/my-flock', label: '내가 맡은 사람', icon: HeartHandshake };
 
-// 모바일 하단 탭은 5개로 제한 (나머지는 데스크탑 사이드바에서)
-const MOBILE_TABS = ALL_NAV.slice(0, 5);
+/** 계정이 간사와 연결돼 있으면(팀 화면) 홈 바로 아래에 "내가 맡은 사람"을 끼운다. */
+function useNavGroups(): NavGroup[] {
+  const { state } = useAuth();
+  const isShepherd = state.status === 'authenticated' && Boolean(state.self?.residentId);
+  if (!isShepherd) return NAV_GROUPS;
+  const [home, ...rest] = NAV_GROUPS;
+  return [{ ...home, items: [...home.items, MY_FLOCK] }, ...rest];
+}
 
 export function AppLayout() {
   return (
@@ -117,6 +125,7 @@ function Shell() {
 function DesktopSidebar() {
   const branding = useChurchBranding();
   const location = useLocation();
+  const navGroups = useNavGroups();
 
   return (
     <aside className="sticky top-0 hidden h-svh w-[232px] shrink-0 flex-col px-3 py-3 md:flex">
@@ -128,7 +137,7 @@ function DesktopSidebar() {
       </div>
 
       <nav className="mt-1 flex flex-col gap-4 overflow-y-auto">
-        {NAV_GROUPS.map((group, index) => (
+        {navGroups.map((group, index) => (
           <div key={group.label ?? `group-${index}`} className="flex flex-col gap-0.5">
             {group.label && <div className="px-2.5 pb-1 text-[11px] font-semibold text-[var(--color-muted-foreground)]">{group.label}</div>}
             {group.items.map(item => (
@@ -334,10 +343,14 @@ function MobileHeader() {
 
 function MobileTabBar() {
   const location = useLocation();
+  // 모바일 하단 탭은 5개로 제한 (나머지는 데스크탑 사이드바에서)
+  const tabs = useNavGroups()
+    .flatMap(group => group.items)
+    .slice(0, 5);
 
   return (
     <nav className="sticky bottom-0 z-10 grid grid-cols-5 border-t border-[var(--color-border)] bg-[var(--color-background)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-      {MOBILE_TABS.map(item => {
+      {tabs.map(item => {
         const active = isActive(item, location.pathname);
         const Icon = item.icon;
         return (

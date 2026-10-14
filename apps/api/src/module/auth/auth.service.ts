@@ -4,7 +4,9 @@ import { ConfigProvider } from '@src/config';
 import { DataSources } from '@src/database/data-sources';
 import { AccountEntity } from '@src/database/entities/account.entity';
 import { ChurchEntity } from '@src/database/entities/church.entity';
+import { MemberEntity } from '@src/database/entities/member.entity';
 import { MembershipEntity, MembershipRole } from '@src/database/entities/membership.entity';
+import { ResidentProfileEntity } from '@src/database/entities/resident-profile.entity';
 import type { GoogleProfile } from './strategies/google.strategy';
 import type { AuthContext, JwtPayload } from './types/auth-context';
 
@@ -132,7 +134,27 @@ export class AuthService {
       currentChurch = await churchRepo.findOne({ where: { id: auth.churchId } });
     }
 
-    return { account, memberships: enrichedMemberships, currentChurch, role: auth.role };
+    return { account, memberships: enrichedMemberships, currentChurch, role: auth.role, self: await this.self(auth) };
+  }
+
+  /**
+   * 지금 교회에서 이 계정이 명부의 누구인지 — 계정 ↔ 교인 연결(팀 화면)이 돼 있을 때만.
+   * `residentId` 가 있으면 간사라서 "내가 맡은 사람" 화면이 열린다.
+   */
+  private async self(auth: AuthContext): Promise<{ memberId: number; memberName: string; residentId: number | null } | null> {
+    if (!auth.churchId) return null;
+    const membership = await DataSources.instance
+      .getRepository(MembershipEntity)
+      .findOne({ where: { accountId: auth.accountId, churchId: auth.churchId } });
+    if (!membership?.memberId) return null;
+    const [member, resident] = await Promise.all([
+      DataSources.instance.getRepository(MemberEntity).findOne({ where: { id: membership.memberId, churchId: auth.churchId } }),
+      DataSources.instance
+        .getRepository(ResidentProfileEntity)
+        .findOne({ where: { memberId: membership.memberId, churchId: auth.churchId } }),
+    ]);
+    if (!member) return null;
+    return { memberId: member.id, memberName: member.name, residentId: resident?.id ?? null };
   }
 
   private async issueTokens(payload: JwtPayload): Promise<AuthTokens> {

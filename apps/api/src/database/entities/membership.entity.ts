@@ -25,6 +25,7 @@ export class MembershipEntity extends BaseDateEntityWithDeletedAt {
   @Column({ type: 'enum', enum: MembershipRole, default: MembershipRole.STAFF })
   role!: MembershipRole;
 
-  @Column({ nullable: true })
-  memberId?: number;
+  /** 이 계정이 교인 명부의 누구인지. 간사의 "내가 맡은 사람"이 이걸로 그 사람을 찾는다. */
+  @Column({ type: 'int', nullable: true })
+  memberId?: number | null;
 }

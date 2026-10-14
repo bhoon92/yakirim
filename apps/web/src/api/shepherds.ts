@@ -46,3 +46,6 @@ export const fetchFlock = (residentId: number) => request<FlockMember[]>(`${BASE
 /** 여러 명을 한 번에 맡긴다. 다른 간사 담당이던 사람은 옮겨온다. */
 export const assignFlock = (residentId: number, memberIds: number[]) =>
   request<{ changed: number }>(`${BASE}/residents/${residentId}`, { method: 'POST', body: JSON.stringify({ memberIds }) });
+
+/** 로그인한 계정의 "내가 맡은 사람". 계정이 간사와 연결돼 있지 않으면 residentId 가 null. */
+export const fetchMyFlock = () => request<{ residentId: number | null; flock: FlockMember[] }>(`${BASE}/me`);

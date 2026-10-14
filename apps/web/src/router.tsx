@@ -9,6 +9,7 @@ import { FinancePage } from '@/routes/app/finance';
 import { GalleryPage } from '@/routes/app/gallery';
 import { MembersPage } from '@/routes/app/members';
 import { ResidentsPage } from '@/routes/app/residents';
+import { MyFlockPage } from '@/routes/app/my-flock';
 import { MissionariesPage } from '@/routes/app/missionaries';
 import { OrganizationChartPage } from '@/routes/app/organization-chart';
 import { SettingsPage } from '@/routes/app/settings';
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { index: true, element: <DashboardPage /> },
+          { path: 'my-flock', element: <MyFlockPage /> },
           { path: 'residents', element: <ResidentsPage /> },
           { path: 'members', element: <MembersPage /> },
           { path: 'training', element: <TrainingPage /> },

@@ -17,6 +17,8 @@ export type TeamMember = {
   name: string;
   role: Role;
   pending: boolean;
+  /** 이 계정이 교인 명부의 누구인지. 간사의 "내가 맡은 사람"이 이걸로 그 사람을 찾는다. */
+  member: { id: number; name: string } | null;
 };
 
 async function getJson<T>(url: string): Promise<T> {
@@ -42,10 +44,16 @@ async function send<T>(method: string, url: string, body?: unknown): Promise<T> 
     }
     throw new Error(message);
   }
-  return res.status === 204 ? (undefined as T) : res.json();
+  // 본문 없는 200 도 있다(역할 변경·교인 연결 — Nest 가 void 를 200 으로 돌려준다).
+  // 204 만 보고 json() 을 부르면 저장은 됐는데 화면은 "실패"로 보인다.
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export const listTeam = () => getJson<TeamMember[]>('/api/team');
 export const inviteMember = (email: string, role: Role) => send<TeamMember>('POST', '/api/team/invite', { email, role });
 export const updateMemberRole = (membershipId: number, role: Role) => send<void>('PATCH', `/api/team/${membershipId}`, { role });
+/** 계정 ↔ 교인 연결. null 이면 해제. 한 교인은 한 계정에만 연결된다(409). */
+export const linkTeamMember = (membershipId: number, memberId: number | null) =>
+  send<void>('PATCH', `/api/team/${membershipId}/member`, { memberId });
 export const removeMember = (membershipId: number) => send<void>('DELETE', `/api/team/${membershipId}`);
