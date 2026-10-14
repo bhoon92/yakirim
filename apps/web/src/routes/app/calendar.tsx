@@ -113,7 +113,8 @@ export function CalendarPage() {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
+      {/* 1280px 미만에서는 캘린더 목록을 위로 — 옆에 두면 달력 한 칸이 너무 좁아 일정 제목이 잘렸다 */}
+      <div className="grid gap-6 xl:grid-cols-[16rem_1fr]">
         <CalendarSidebar
           calendars={calendars}
           hidden={hidden}
@@ -246,15 +247,17 @@ function EventPill({
         clickEvent.stopPropagation();
         if (canWrite) onEdit(event);
       }}
-      className="flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] transition-opacity hover:opacity-75"
+      title={time ? `${time} ${event.title}` : event.title}
+      className="@container flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] transition-opacity hover:opacity-75"
       style={{
         backgroundColor: color ? `color-mix(in oklch, ${color} 14%, transparent)` : 'var(--color-muted)',
         color: color ?? 'inherit',
       }}
     >
       <span className="inline-block size-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-      {time && <span className="shrink-0 tabular-nums opacity-80">{time}</span>}
-      <span className="truncate font-medium">{event.title}</span>
+      {/* 칸이 좁으면 시간이 먼저 자리를 차지해 제목이 통째로 잘렸다 — 넓을 때만 시간을 붙이고 제목을 우선한다 */}
+      {time && <span className="hidden shrink-0 tabular-nums opacity-80 @min-[7rem]:inline">{time}</span>}
+      <span className="min-w-0 truncate font-medium">{event.title}</span>
       {event.recurrence && <Repeat className="ml-auto size-2.5 shrink-0 opacity-70" />}
     </div>
   );

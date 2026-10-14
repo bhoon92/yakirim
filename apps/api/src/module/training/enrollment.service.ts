@@ -3,7 +3,7 @@ import { In } from 'typeorm';
 import { DataSources } from '@src/database/data-sources';
 import { MemberEntity } from '@src/database/entities/member.entity';
 import { TrainingAttendanceEntity } from '@src/database/entities/training-attendance.entity';
-import { TrainingCohortEntity } from '@src/database/entities/training-cohort.entity';
+import { CohortStatus, TrainingCohortEntity } from '@src/database/entities/training-cohort.entity';
 import { TrainingCourseEntity } from '@src/database/entities/training-course.entity';
 import { EnrollmentStatus, TrainingEnrollmentEntity } from '@src/database/entities/training-enrollment.entity';
 import { TrainingSessionEntity } from '@src/database/entities/training-session.entity';
@@ -87,7 +87,18 @@ export class TrainingEnrollmentService {
         ...(dto.status !== enrollment.status ? { promotionDismissedAt: null } : {}),
       }
     );
+    if (closed) await this.startIfPlanned(churchId, enrollment.cohortId);
     return (await this.repo().findOne({ where: { id: enrollmentId, churchId } }))!;
+  }
+
+  /**
+   * 출석을 처음 체크하거나 수료를 처리하면 그 기수는 시작된 것이다 — "예정"이면 "진행 중"으로 옮긴다.
+   * 그대로 두면 홈의 "진행 중 훈련"이 0 으로 남았다. 종료는 사람이 정한다(언제 끝났는지는 운영 판단).
+   */
+  private async startIfPlanned(churchId: number, cohortId: number): Promise<void> {
+    await DataSources.instance
+      .getRepository(TrainingCohortEntity)
+      .update({ id: cohortId, churchId, status: CohortStatus.PLANNED }, { status: CohortStatus.ONGOING });
   }
 
   async remove(churchId: number, enrollmentId: number): Promise<void> {
@@ -113,6 +124,7 @@ export class TrainingEnrollmentService {
       if (!existing) {
         await this.attendanceRepo().save(this.attendanceRepo().create({ churchId, sessionId, enrollmentId: dto.enrollmentId }));
       }
+      await this.startIfPlanned(churchId, session.cohortId);
       return { present: true };
     }
     if (existing) await this.attendanceRepo().softDelete(existing.id);

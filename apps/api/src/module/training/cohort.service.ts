@@ -1,9 +1,10 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { In } from 'typeorm';
+import { addDays } from '@src/common/date';
 import { DataSources } from '@src/database/data-sources';
 import { MemberEntity } from '@src/database/entities/member.entity';
 import { CohortStatus, TrainingCohortEntity } from '@src/database/entities/training-cohort.entity';
-import { TrainingCourseEntity } from '@src/database/entities/training-course.entity';
+import { TrainingCourseEntity, TrainingFormat } from '@src/database/entities/training-course.entity';
 import { EnrollmentStatus, TrainingEnrollmentEntity } from '@src/database/entities/training-enrollment.entity';
 import { TrainingSessionEntity } from '@src/database/entities/training-session.entity';
 import { TrainingAttendanceEntity } from '@src/database/entities/training-attendance.entity';
@@ -106,6 +107,9 @@ export class TrainingCohortService {
     if (!name) throw new BadRequestException('기수 이름을 입력하세요.');
     await this.assertNameFree(churchId, dto.courseId, name);
     const sessionCount = dto.sessionCount ?? course.defaultSessionCount;
+    const sessionDates = Array.from({ length: sessionCount }, (_unused, index) => sessionDateFor(course.format, dto.startDate, index));
+    // 종료일을 안 주면 마지막 회차 날짜로 — 목록의 "시작 ~ 종료"가 비어 보이지 않게
+    const lastDate = sessionDates.filter((date): date is string => date !== null).at(-1);
 
     const created = await DataSources.instance.transaction(async manager => {
       const cohort = await manager.getRepository(TrainingCohortEntity).save(
@@ -114,7 +118,7 @@ export class TrainingCohortService {
           courseId: dto.courseId,
           name,
           startDate: dto.startDate,
-          endDate: dto.endDate,
+          endDate: dto.endDate ?? (lastDate && lastDate !== dto.startDate ? lastDate : undefined),
           status: CohortStatus.PLANNED,
           leaderMemberId: dto.leaderMemberId,
           note: dto.note,
@@ -126,6 +130,7 @@ export class TrainingCohortService {
           churchId,
           cohortId: cohort.id,
           sequence: index + 1,
+          date: sessionDates[index] ?? undefined,
         })
       );
       if (sessions.length > 0) await manager.getRepository(TrainingSessionEntity).save(sessions);
@@ -257,5 +262,21 @@ export class TrainingCohortService {
       .groupBy('s.cohort_id')
       .getRawMany()) as { cohortId: number; count: string }[];
     return new Map(rows.map(row => [Number(row.cohortId), Number(row.count)]));
+  }
+}
+
+/**
+ * 기수 개설 때 회차 날짜를 미리 채운다 — 빈 날짜 열두 칸을 하나씩 고르게 하지 않으려고.
+ * 매주 과정은 7일 간격, 수련회·합숙은 하루씩, 그 밖에는 첫 회차만. 나중에 회차별로 고칠 수 있다.
+ */
+function sessionDateFor(format: TrainingFormat, startDate: string, index: number): string | null {
+  switch (format) {
+    case TrainingFormat.WEEKLY:
+      return addDays(startDate, index * 7);
+    case TrainingFormat.RETREAT:
+    case TrainingFormat.INTENSIVE:
+      return addDays(startDate, index);
+    default:
+      return index === 0 ? startDate : null;
   }
 }

@@ -26,3 +26,9 @@ export function daysBetween(from: string, to: string): number {
   const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
   return Math.max(0, Math.round(ms / 86400000));
 }
+
+/** 'YYYY-MM-DD' 에 일수를 더한다. 시각이 끼지 않는 순수 날짜 계산이라 UTC 로 해도 하루가 밀리지 않는다. */
+export function addDays(date: string, days: number): string {
+  const time = Date.parse(`${date}T00:00:00Z`) + days * 86400000;
+  return new Date(time).toISOString().slice(0, 10);
+}
