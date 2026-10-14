@@ -18,6 +18,7 @@ import { usePermissions } from '@/lib/permissions';
 import { CareNoteSection } from './care-note-section';
 import { MemberJourneySection } from './member-journey-section';
 import { ReceiptSection } from './receipt-section';
+import { isSubmitEnter } from '@/lib/keyboard';
 
 const KINDS: AffiliationKind[] = ['department', 'ministry', 'smallGroup'];
 
@@ -134,7 +135,7 @@ function EditableName({ memberId, name }: { memberId: number; name: string }) {
         onChange={event => setValue(event.target.value)}
         onBlur={commit}
         onKeyDown={event => {
-          if (event.key === 'Enter') event.currentTarget.blur();
+          if (isSubmitEnter(event)) event.currentTarget.blur();
           if (event.key === 'Escape') {
             event.stopPropagation();
             cancelRef.current = true;
@@ -200,7 +201,7 @@ function EditablePhone({ memberId, phone }: { memberId: number; phone: string | 
         onChange={event => setValue(event.target.value)}
         onBlur={commit}
         onKeyDown={event => {
-          if (event.key === 'Enter') event.currentTarget.blur();
+          if (isSubmitEnter(event)) event.currentTarget.blur();
           if (event.key === 'Escape') {
             event.stopPropagation();
             cancelRef.current = true;

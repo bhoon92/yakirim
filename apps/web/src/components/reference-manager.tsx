@@ -19,6 +19,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/lib/permissions';
+import { isSubmitEnter } from '@/lib/keyboard';
 
 /** 기준정보(기관·사역팀·공동체·사역 역할·예배·재적상태) 관리 — 탭 + 연도 + CRUD. 각 도메인 페이지에서 재사용. */
 export function ReferenceManager({ kinds }: { kinds: ReferenceKind[] }) {
@@ -356,7 +357,7 @@ function ReferenceRow({
           maxLength={40}
           placeholder="이름"
           onKeyDown={event => {
-            if (event.key === 'Enter') submit();
+            if (isSubmitEnter(event)) submit();
             if (event.key === 'Escape') cancelEditing();
           }}
           className="h-9"
@@ -371,7 +372,7 @@ function ReferenceRow({
               onChange={event => setStallsDraft(event.target.value)}
               placeholder="정체 기준"
               onKeyDown={event => {
-                if (event.key === 'Enter') submit();
+                if (isSubmitEnter(event)) submit();
                 if (event.key === 'Escape') cancelEditing();
               }}
               className="h-9 w-28"
@@ -389,7 +390,7 @@ function ReferenceRow({
             maxLength={200}
             placeholder="설명 (선택)"
             onKeyDown={event => {
-              if (event.key === 'Enter') submit();
+              if (isSubmitEnter(event)) submit();
               if (event.key === 'Escape') cancelEditing();
             }}
             className="h-9"

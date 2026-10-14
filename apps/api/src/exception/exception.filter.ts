@@ -33,6 +33,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message: message,
         error: { reqId: headers.reqId, code: res.code || String(status), desc },
       });
+    } else if (isUniqueViolation(exception)) {
+      // 같은 이름 등 유니크 제약 위반은 서버 고장이 아니라 사용자가 고칠 수 있는 충돌이다.
+      // 500 "예기치 못한 오류"로 보내면 원인을 알 수 없다 — 서비스마다 사전 검사를 다 하지 않아도 여기서 409 로 바꾼다.
+      return response.status(HttpStatus.CONFLICT).json({
+        status: HttpStatus.CONFLICT,
+        message: '이미 같은 이름(값)이 있습니다.',
+        error: { reqId: headers.reqId, code: String(HttpStatus.CONFLICT), desc: ['이미 같은 이름(값)이 있습니다.'] },
+      });
     } else {
       console.error(exception);
       return response.status(status).json({
@@ -46,4 +54,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       });
     }
   }
+}
+
+/** Postgres unique_violation (23505). TypeORM 의 QueryFailedError 에 driverError.code 로 실려 온다. */
+function isUniqueViolation(exception: unknown): boolean {
+  const driverError = (exception as { driverError?: { code?: string } })?.driverError;
+  return driverError?.code === '23505';
 }

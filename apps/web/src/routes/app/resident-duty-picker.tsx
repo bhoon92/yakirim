@@ -12,6 +12,7 @@ import {
 } from '@/api/residents';
 import { TagChip } from '@/components/ui/tag-chip';
 import { cn } from '@/lib/utils';
+import { isSubmitEnter } from '@/lib/keyboard';
 
 /** 사역팀·하우스 태그와 색이 겹쳐도 같은 것으로 읽히지 않게 seed 에 접두어를 붙인다. */
 const dutySeed = (id: number) => `duty-${id}`;
@@ -161,7 +162,7 @@ function DutyMenu({
       onClose();
       return;
     }
-    if (event.key === 'Enter' && keyword && !busy) {
+    if (isSubmitEnter(event) && keyword && !busy) {
       event.preventDefault();
       if (exact && assignedIds.has(exact.id)) unassignMut.mutate(exact.id);
       else assignMut.mutate(keyword);

@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { usePermissions } from '@/lib/permissions';
 import { todayString } from '@/lib/date';
 import { CategorySelect } from './category-select';
+import { isSubmitEnter } from '@/lib/keyboard';
 
 export function OperationsView() {
   const queryClient = useQueryClient();
@@ -202,7 +203,7 @@ function TransactionForm({ onCreated }: { onCreated: () => void }) {
             value={amount}
             onChange={event => setAmount(event.target.value)}
             onKeyDown={event => {
-              if (event.key === 'Enter') submit();
+              if (isSubmitEnter(event)) submit();
             }}
             className="text-right tabular-nums"
           />

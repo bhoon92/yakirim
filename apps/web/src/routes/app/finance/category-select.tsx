@@ -5,6 +5,7 @@ import type { Category } from '@/api/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { isSubmitEnter } from '@/lib/keyboard';
 
 /** 카테고리 알약 선택 + 인라인 추가/편집 (헌금 종류 / 계정과목 공용). */
 export function CategorySelect({
@@ -70,7 +71,7 @@ export function CategorySelect({
             className="h-8 w-28"
             onBlur={commitRename}
             onKeyDown={event => {
-              if (event.key === 'Enter') event.currentTarget.blur();
+              if (isSubmitEnter(event)) event.currentTarget.blur();
               if (event.key === 'Escape') {
                 cancelRef.current = true;
                 event.currentTarget.blur();
@@ -126,7 +127,7 @@ export function CategorySelect({
               className="h-8 w-28"
               onBlur={commitCreate}
               onKeyDown={event => {
-                if (event.key === 'Enter') event.currentTarget.blur();
+                if (isSubmitEnter(event)) event.currentTarget.blur();
                 if (event.key === 'Escape') {
                   cancelRef.current = true;
                   event.currentTarget.blur();

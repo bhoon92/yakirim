@@ -24,6 +24,7 @@ import { usePermissions } from '@/lib/permissions';
 import { todayString } from '@/lib/date';
 import { CategorySelect } from './category-select';
 import { MemberPicker } from './member-picker';
+import { isSubmitEnter } from '@/lib/keyboard';
 
 export function OfferingsView() {
   const queryClient = useQueryClient();
@@ -153,7 +154,7 @@ function OfferingRow({
             value={amount}
             onChange={event => setAmount(event.target.value)}
             onKeyDown={event => {
-              if (event.key === 'Enter') save();
+              if (isSubmitEnter(event)) save();
               if (event.key === 'Escape') setEditing(false);
             }}
             className="w-40 text-right tabular-nums"
@@ -268,7 +269,7 @@ function OfferingForm({ date, onCreated }: { date: string; onCreated: () => void
           value={amount}
           onChange={event => setAmount(event.target.value)}
           onKeyDown={event => {
-            if (event.key === 'Enter') submit();
+            if (isSubmitEnter(event)) submit();
           }}
           className="w-40 text-right tabular-nums"
         />

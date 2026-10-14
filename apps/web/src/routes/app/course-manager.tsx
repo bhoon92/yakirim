@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/lib/permissions';
 import { CourseOptionEditor } from './course-picker';
+import { isSubmitEnter } from '@/lib/keyboard';
 
 /**
  * 훈련 과정 전체 보기 — 기수 개설 칸의 드롭다운과 같은 편집기를 쓴다.
@@ -109,7 +110,7 @@ function CourseList() {
             placeholder="새 과정 이름 (예: 겨울 수련회)"
             value={name}
             onChange={event => setName(event.target.value)}
-            onKeyDown={event => event.key === 'Enter' && name.trim() && !createMut.isPending && createMut.mutate()}
+            onKeyDown={event => isSubmitEnter(event) && name.trim() && !createMut.isPending && createMut.mutate()}
           />
           <Button size="sm" variant="outline" onClick={() => createMut.mutate()} disabled={!name.trim() || createMut.isPending}>
             <Plus className="size-3.5" />

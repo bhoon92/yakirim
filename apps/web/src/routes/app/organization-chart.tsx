@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/auth/auth-context';
 import { useOrgLabels } from '@/lib/org-labels';
 import { usePermissions } from '@/lib/permissions';
+import { isSubmitEnter } from '@/lib/keyboard';
 
 /** 트리에서 고른 노드. kind 만 있으면 그 분류 전체, referenceId 까지 있으면 특정 조직. */
 type Selection = { kind: OrganizationKind; referenceId?: number };
@@ -534,7 +535,7 @@ function InlineNameInput({
         disabled={pending}
         onChange={event => setValue(event.target.value)}
         onKeyDown={event => {
-          if (event.key === 'Enter') commit();
+          if (isSubmitEnter(event)) commit();
           if (event.key === 'Escape') {
             event.stopPropagation();
             onCancel();

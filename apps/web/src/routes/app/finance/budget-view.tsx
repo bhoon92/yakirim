@@ -23,6 +23,7 @@ import { orgKindFromBudgetKind, useOrgLabels } from '@/lib/org-labels';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { isSubmitEnter } from '@/lib/keyboard';
 
 const KIND_TO_REF: Record<BudgetTargetKind, ReferenceKind> = {
   department: 'department',
@@ -220,7 +221,7 @@ function AllocationForm({ fiscalYearId }: { fiscalYearId: number }) {
             value={amount}
             onChange={event => setAmount(event.target.value)}
             onKeyDown={event => {
-              if (event.key === 'Enter') submit();
+              if (isSubmitEnter(event)) submit();
             }}
             className="max-w-xs text-right tabular-nums"
           />

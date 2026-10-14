@@ -42,6 +42,7 @@ import { cn } from '@/lib/utils';
 import { CourseManagerModal } from './course-manager';
 import { CoursePicker } from './course-picker';
 import { PromotionPanel } from './promotion-panel';
+import { isSubmitEnter } from '@/lib/keyboard';
 
 const STATUS_TONE: Record<CohortStatus, 'neutral' | 'muted' | 'success' | 'warn'> = {
   planned: 'neutral',
@@ -712,7 +713,7 @@ function EditableCohortName({ cohort, canWrite, onSaved }: { cohort: Cohort; can
           onChange={event => setDraft(event.target.value)}
           onBlur={commit}
           onKeyDown={event => {
-            if (event.key === 'Enter') event.currentTarget.blur();
+            if (isSubmitEnter(event)) event.currentTarget.blur();
             if (event.key === 'Escape') {
               event.stopPropagation();
               cancelRef.current = true;

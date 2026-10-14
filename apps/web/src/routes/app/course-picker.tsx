@@ -16,6 +16,7 @@ import {
 } from '@/api/training';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { isSubmitEnter } from '@/lib/keyboard';
 
 const FORMATS: TrainingFormat[] = ['weekly', 'retreat', 'intensive', 'etc'];
 
@@ -86,7 +87,7 @@ export function CoursePicker({ value, onChange }: { value: number | null; onChan
       setOpen(false);
       return;
     }
-    if (event.key === 'Enter' && keyword && !createMut.isPending) {
+    if (isSubmitEnter(event) && keyword && !createMut.isPending) {
       event.preventDefault();
       if (exact?.isActive) pick(exact);
       else if (!exact) createMut.mutate(keyword);
@@ -301,7 +302,7 @@ export function CourseOptionEditor({
           value={name}
           onChange={event => setName(event.target.value)}
           onBlur={saveName}
-          onKeyDown={event => event.key === 'Enter' && (event.currentTarget as HTMLInputElement).blur()}
+          onKeyDown={event => isSubmitEnter(event) && (event.currentTarget as HTMLInputElement).blur()}
         />
       </Field>
 
