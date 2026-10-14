@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Home } from 'lucide-react';
+import { ArrowUpRight, Home, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { createResident, listResidentStatuses } from '@/api/residents';
-import { applyCohortPromotions, fetchCohortPromotions } from '@/api/training';
+import { applyCohortPromotions, dismissCohortPromotions, fetchCohortPromotions } from '@/api/training';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,8 @@ import { cn } from '@/lib/utils';
  * 수료 → 다음 단계 제안 (planning 00.7 C).
  *
  * 수료로 바꾸는 순간 기수 화면 위쪽에 뜬다. 제안은 매번 데이터에서 계산되므로 올리고 나면 저절로 사라지고,
- * 안 올리고 닫아도 다음에 열면 다시 보인다. **자동으로 바꾸지 않는다** — 담당자가 보고 누른다.
+ * 안 올리고 닫아도 다음에 열면 다시 보인다. 올리지 않을 사람은 "넘기기"로 감춘다(수강 기록에 넘긴 날이 남는다).
+ * **자동으로 바꾸지 않는다** — 담당자가 보고 누른다.
  */
 export function PromotionPanel({ cohortId }: { cohortId: number }) {
   const queryClient = useQueryClient();
@@ -36,6 +37,7 @@ export function PromotionPanel({ cohortId }: { cohortId: number }) {
     queryClient.invalidateQueries({ queryKey: ['members'] });
     queryClient.invalidateQueries({ queryKey: ['member'] });
     queryClient.invalidateQueries({ queryKey: ['home', 'dashboard'] });
+    queryClient.invalidateQueries({ queryKey: ['training', 'promotions'] });
   };
 
   const promoteMut = useMutation({
@@ -62,6 +64,24 @@ export function PromotionPanel({ cohortId }: { cohortId: number }) {
     },
     onError: (error: Error) => window.alert(`간사 등록 실패: ${error.message}`),
   });
+
+  const dismissMut = useMutation({
+    mutationFn: (memberIds: number[]) => dismissCohortPromotions(cohortId, memberIds),
+    onSuccess: () => {
+      setUnchecked(new Set());
+      invalidate();
+    },
+    onError: (error: Error) => window.alert(`넘기기 실패: ${error.message}`),
+  });
+
+  // 넘기기는 그 사람의 이 기수 제안 전체(단계·간사)를 감춘다 — 수강 기록 하나에 표시가 하나라서
+  const dismiss = (memberIds: number[], names: string) => {
+    if (
+      window.confirm(`${names} — 이 기수의 수료 제안(단계 올리기·간사 등록)에서 뺄까요?\n수료를 취소했다가 다시 수료하면 다시 나타납니다.`)
+    ) {
+      dismissMut.mutate(memberIds);
+    }
+  };
 
   if (!data) return null;
   const showPromote = can('member:write') && data.target && data.candidates.length > 0;
@@ -110,7 +130,26 @@ export function PromotionPanel({ cohortId }: { cohortId: number }) {
             <Button size="sm" onClick={() => promoteMut.mutate(selected)} disabled={selected.length === 0 || promoteMut.isPending}>
               {selected.length}명을 “{data.target.name}”(으)로 올리기
             </Button>
-            <span className="text-[11px] text-[var(--color-muted-foreground)]">단계 이력에 수료일과 “기수 수료” 사유가 남습니다.</span>
+            {selected.length < data.candidates.length ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={dismissMut.isPending}
+                onClick={() => {
+                  const skipped = data.candidates.filter(candidate => unchecked.has(candidate.memberId));
+                  dismiss(
+                    skipped.map(candidate => candidate.memberId),
+                    skipped.map(candidate => candidate.memberName).join(', ')
+                  );
+                }}
+              >
+                제외한 {data.candidates.length - selected.length}명 넘기기
+              </Button>
+            ) : (
+              <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                단계 이력에 수료일과 “기수 수료” 사유가 남습니다. 올리지 않을 사람은 눌러서 제외한 뒤 넘기세요.
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -122,17 +161,29 @@ export function PromotionPanel({ cohortId }: { cohortId: number }) {
           </p>
           <div className="flex flex-wrap gap-1.5">
             {data.residentCandidates.map(candidate => (
-              <Button
+              <span
                 key={candidate.memberId}
-                size="sm"
-                variant="outline"
-                disabled={residentMut.isPending}
-                onClick={() => {
-                  if (window.confirm(`${candidate.memberName} 님을 공동체 간사로 등록할까요?`)) residentMut.mutate(candidate.memberId);
-                }}
+                className="inline-flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]"
               >
-                {candidate.memberName} 간사로 등록
-              </Button>
+                <button
+                  disabled={residentMut.isPending}
+                  onClick={() => {
+                    if (window.confirm(`${candidate.memberName} 님을 공동체 간사로 등록할까요?`)) residentMut.mutate(candidate.memberId);
+                  }}
+                  className="px-2.5 py-1 text-xs font-medium hover:bg-[var(--color-muted)]"
+                >
+                  {candidate.memberName} 간사로 등록
+                </button>
+                <button
+                  disabled={dismissMut.isPending}
+                  onClick={() => dismiss([candidate.memberId], candidate.memberName)}
+                  className="border-l border-[var(--color-border)] px-1.5 py-1 text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
+                  aria-label={`${candidate.memberName} 넘기기`}
+                  title="넘기기"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
             ))}
           </div>
         </div>

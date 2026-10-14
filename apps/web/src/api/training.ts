@@ -209,3 +209,24 @@ export const applyCohortPromotions = (cohortId: number, memberIds: number[]) =>
     method: 'POST',
     body: JSON.stringify({ memberIds }),
   });
+
+/** 놓친 제안 — 제안이 남아 있는 기수만 (최근 기수 먼저). */
+export type PendingPromotion = CohortPromotions & { cohortId: number; label: string };
+
+export const fetchPendingPromotions = () => request<PendingPromotion[]>(`${BASE}/cohorts/pending-promotions`);
+
+/** 넘기기 — 고른 수료자의 단계·간사 제안을 더는 띄우지 않는다. */
+export const dismissCohortPromotions = (cohortId: number, memberIds: number[]) =>
+  request<{ dismissed: number }>(`${BASE}/cohorts/${cohortId}/promotions/dismiss`, {
+    method: 'POST',
+    body: JSON.stringify({ memberIds }),
+  });
+
+/** 다음 STEP 후보 — 이전 STEP 을 수료했는데 이 과정은 아직 안 들은 사람. */
+export type NextStepCandidates = {
+  previousStep: number | null;
+  candidates: { memberId: number; memberName: string; completedLabel: string; completedAt: string | null }[];
+};
+
+export const fetchNextStepCandidates = (cohortId: number) =>
+  request<NextStepCandidates>(`${BASE}/cohorts/${cohortId}/next-step-candidates`);

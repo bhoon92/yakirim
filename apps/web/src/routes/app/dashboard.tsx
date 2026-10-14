@@ -6,6 +6,7 @@ import { Link } from 'react-router';
 
 import { fetchHomeDashboard, type HomeActivityItem, type HomeScheduleItem } from '@/api/dashboard';
 import { fetchStalledMembers } from '@/api/members';
+import { fetchPendingPromotions } from '@/api/training';
 import { MemberDetailModal } from './member-detail-modal';
 import { useAuth } from '@/auth/auth-context';
 import { useChurchBranding } from '@/branding/church-branding';
@@ -120,6 +121,9 @@ export function DashboardPage() {
            * 담당자가 이번 주에 실제로 할 일이 나오는 곳이라 파이프라인과 짝으로 붙인다.
            */}
           <StalledCard onOpenMember={setOpenMemberId} />
+
+          {/* 정체의 짝 — 정체는 "안 움직이는 사람", 이건 "움직였는데(수료) 기록이 안 따라온 사람"이다 */}
+          <PendingPromotionCard />
 
           <SectionCard title="오늘의 일정" hint={`${schedule.length}건`} actionLabel="달력 열기" actionTo="/app/calendar">
             {schedule.length === 0 ? (
@@ -283,6 +287,41 @@ function StalledCard({ onOpenMember }: { onOpenMember: (id: number) => void }) {
           )}
         </>
       )}
+    </SectionCard>
+  );
+}
+
+function PendingPromotionCard() {
+  const { data = [], isLoading } = useQuery({ queryKey: ['training', 'promotions', 'pending'], queryFn: fetchPendingPromotions });
+  // 제안 설정을 안 한 교회에는 늘 비어 있으니 카드 자체를 숨긴다
+  if (isLoading || data.length === 0) return null;
+  const people = new Set(data.flatMap(row => [...row.candidates, ...row.residentCandidates].map(person => person.memberId)));
+
+  return (
+    <SectionCard title="수료 후 다음 단계" hint={`${people.size}명`} actionLabel="훈련으로" actionTo="/app/training">
+      <ul className="divide-y divide-[var(--color-border)]">
+        {data.slice(0, 5).map(row => (
+          <li key={row.cohortId}>
+            <Link
+              to={`/app/training?cohort=${row.cohortId}`}
+              className="flex items-center gap-3 py-2.5 transition-colors hover:bg-[var(--color-muted)]"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{row.label}</div>
+                <div className="mt-0.5 truncate text-xs text-[var(--color-muted-foreground)]">
+                  {[
+                    row.target && row.candidates.length > 0 ? `“${row.target.name}”(으)로 올릴 ${row.candidates.length}명` : null,
+                    row.residentCandidates.length > 0 ? `간사 등록 제안 ${row.residentCandidates.length}명` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </div>
+              </div>
+              <ChevronRight className="size-4 shrink-0 text-[var(--color-muted-foreground)]" />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </SectionCard>
   );
 }

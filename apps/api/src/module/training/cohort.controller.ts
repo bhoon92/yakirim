@@ -33,6 +33,20 @@ export class TrainingCohortController {
     private readonly promotions: TrainingPromotionService
   ) {}
 
+  // 'pending-promotions' 는 :id 보다 먼저 선언해야 ParseIntPipe 에 걸리지 않는다.
+  @Get('pending-promotions')
+  @Permissions('training:read')
+  @ApiOperation({
+    summary: '놓친 수료 제안',
+    description: [
+      '수료했는데 아직 과정이 정한 단계 아래에 있거나, 간사 등록 제안을 받지 않은 사람이 있는 기수 목록 (최근 기수 먼저).',
+      '넘긴 사람(`POST /training/cohorts/{id}/promotions/dismiss`)은 빠진다. 각 항목은 기수별 제안과 같은 모양이다.',
+    ].join('\n'),
+  })
+  pendingPromotions(@RequireChurch() auth: Auth) {
+    return this.promotions.pending(auth.churchId);
+  }
+
   @Get()
   @Permissions('training:read')
   @ApiOperation({
@@ -183,5 +197,29 @@ export class TrainingCohortController {
   @ApiOkResponse({ schema: { type: 'object', properties: { promoted: { type: 'number' }, skipped: { type: 'number' } } } })
   applyPromotions(@RequireChurch() auth: Auth, @Param('id', ParseIntPipe) id: number, @Body() dto: ApplyPromotionDto) {
     return this.promotions.apply(auth.churchId, id, dto.memberIds);
+  }
+
+  @Post(':id/promotions/dismiss')
+  @Permissions('training:write')
+  @ApiOperation({
+    summary: '수료 제안 넘기기',
+    description: '고른 수료자의 단계·간사 제안을 더는 띄우지 않는다. 수강 기록에 넘긴 날이 남는다.',
+  })
+  @ApiOkResponse({ schema: { type: 'object', properties: { dismissed: { type: 'number' } } } })
+  dismissPromotions(@RequireChurch() auth: Auth, @Param('id', ParseIntPipe) id: number, @Body() dto: ApplyPromotionDto) {
+    return this.promotions.dismiss(auth.churchId, id, dto.memberIds);
+  }
+
+  @Get(':id/next-step-candidates')
+  @Permissions('training:read')
+  @ApiOperation({
+    summary: '다음 STEP 후보',
+    description: [
+      '이 기수 과정의 바로 앞 STEP 을 수료했는데 이 과정은 아직 듣지 않은 사람 (중도포기는 다시 후보).',
+      '과정에 STEP 이 없거나 STEP 1 이면 `previousStep: null`.',
+    ].join('\n'),
+  })
+  nextStepCandidates(@RequireChurch() auth: Auth, @Param('id', ParseIntPipe) id: number) {
+    return this.promotions.nextStepCandidates(auth.churchId, id);
   }
 }

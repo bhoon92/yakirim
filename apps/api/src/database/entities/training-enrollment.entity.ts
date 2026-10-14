@@ -41,4 +41,11 @@ export class TrainingEnrollmentEntity extends BaseDateEntityWithDeletedAt {
 
   @Column({ type: 'text', nullable: true })
   note?: string;
+
+  /**
+   * 이 수료로 생긴 단계·간사 제안을 담당자가 "넘긴" 날. 값이 있으면 제안에서 다시 보이지 않는다.
+   * 제안 자체는 저장하지 않고 매번 계산하므로(planning 00.7), 넘긴 사실만 여기 남긴다.
+   */
+  @Column({ comment: '수료 제안을 넘긴 날', type: 'date', nullable: true })
+  promotionDismissedAt?: string | null;
 }

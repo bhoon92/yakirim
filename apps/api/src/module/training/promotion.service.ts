@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { In } from 'typeorm';
+import { In, IsNull, Not } from 'typeorm';
 import { todayString } from '@src/common/date';
 import { DataSources } from '@src/database/data-sources';
 import { MemberStatusEntity } from '@src/database/entities/member-status.entity';
@@ -31,6 +31,16 @@ export type CohortPromotions = {
   residentCandidates: { memberId: number; memberName: string }[];
 };
 
+/** 놓친 제안 — 제안이 남아 있는 기수만. 대시보드·훈련 화면이 모아 보여준다. */
+export type PendingPromotion = CohortPromotions & { cohortId: number; label: string };
+
+/** 다음 STEP 후보 — 이전 STEP 을 수료했는데 이 과정은 아직 안 들은 사람. */
+export type NextStepCandidates = {
+  /** 이전 단계 번호. null 이면 이 과정은 사다리 첫 단계이거나 사다리 밖이라 후보가 없다. */
+  previousStep: number | null;
+  candidates: { memberId: number; memberName: string; completedLabel: string; completedAt: string | null }[];
+};
+
 /**
  * 훈련 수료 → 파이프라인 단계 제안 (planning 00.7 C).
  *
@@ -49,7 +59,7 @@ export class TrainingPromotionService {
     const { course } = await this.load(churchId, cohortId);
     const completed = await DataSources.instance
       .getRepository(TrainingEnrollmentEntity)
-      .find({ where: { churchId, cohortId, status: EnrollmentStatus.COMPLETED } });
+      .find({ where: { churchId, cohortId, status: EnrollmentStatus.COMPLETED, promotionDismissedAt: IsNull() } });
 
     const memberIds = completed.map(row => row.memberId);
     const [members, statuses, residents] = await Promise.all([
@@ -121,6 +131,113 @@ export class TrainingPromotionService {
       }
     });
     return { promoted, skipped: memberIds.length - promoted };
+  }
+
+  /** 넘기기 — 이 기수에서 고른 사람의 수료 제안(단계·간사)을 더는 띄우지 않는다. */
+  async dismiss(churchId: number, cohortId: number, memberIds: number[]): Promise<{ dismissed: number }> {
+    await this.load(churchId, cohortId);
+    const result = await DataSources.instance
+      .getRepository(TrainingEnrollmentEntity)
+      .update(
+        { churchId, cohortId, memberId: In(memberIds), status: EnrollmentStatus.COMPLETED, promotionDismissedAt: IsNull() },
+        { promotionDismissedAt: todayString() }
+      );
+    return { dismissed: result.affected ?? 0 };
+  }
+
+  /**
+   * 교회 전체의 놓친 제안. 제안 설정이 있는 과정의 기수 중 넘기지 않은 수료자가 있는 곳만 계산한다
+   * (기수 수십 개 규모라 기수별 계산을 그대로 돌린다).
+   */
+  async pending(churchId: number): Promise<PendingPromotion[]> {
+    const courses = await DataSources.instance.getRepository(TrainingCourseEntity).find({ where: { churchId }, withDeleted: true });
+    const configured = courses.filter(course => course.completionStatusId || course.completionSuggestsResident);
+    if (configured.length === 0) return [];
+    const courseName = new Map(courses.map(course => [course.id, course.name]));
+
+    const cohorts = await DataSources.instance
+      .getRepository(TrainingCohortEntity)
+      .find({ where: { churchId, courseId: In(configured.map(course => course.id)) }, order: { startDate: 'DESC', id: 'DESC' } });
+    if (cohorts.length === 0) return [];
+
+    const open = await DataSources.instance.getRepository(TrainingEnrollmentEntity).find({
+      select: { cohortId: true },
+      where: {
+        churchId,
+        cohortId: In(cohorts.map(cohort => cohort.id)),
+        status: EnrollmentStatus.COMPLETED,
+        promotionDismissedAt: IsNull(),
+      },
+    });
+    const withCompleters = new Set(open.map(row => row.cohortId));
+
+    const result: PendingPromotion[] = [];
+    for (const cohort of cohorts.filter(row => withCompleters.has(row.id))) {
+      const promotions = await this.forCohort(churchId, cohort.id);
+      if (promotions.candidates.length === 0 && promotions.residentCandidates.length === 0) continue;
+      result.push({ ...promotions, cohortId: cohort.id, label: `${courseName.get(cohort.courseId) ?? ''} ${cohort.name}`.trim() });
+    }
+    return result;
+  }
+
+  /**
+   * 다음 STEP 후보 — 이 과정의 바로 앞 STEP 과정(같은 번호가 여럿이면 모두)을 수료했는데,
+   * 이 과정은 어느 기수에서도 듣지 않은 사람. 중도포기했던 사람은 다시 부를 수 있게 후보에 둔다.
+   */
+  async nextStepCandidates(churchId: number, cohortId: number): Promise<NextStepCandidates> {
+    const { course } = await this.load(churchId, cohortId);
+    if (!course.step || course.step <= 1) return { previousStep: null, candidates: [] };
+    const previousStep = course.step - 1;
+
+    const courseRepo = DataSources.instance.getRepository(TrainingCourseEntity);
+    const cohortRepo = DataSources.instance.getRepository(TrainingCohortEntity);
+    const enrollmentRepo = DataSources.instance.getRepository(TrainingEnrollmentEntity);
+
+    const previousCourses = await courseRepo.find({ where: { churchId, step: previousStep }, withDeleted: true });
+    if (previousCourses.length === 0) return { previousStep, candidates: [] };
+
+    const [previousCohorts, thisCohorts] = await Promise.all([
+      cohortRepo.find({ where: { churchId, courseId: In(previousCourses.map(row => row.id)) } }),
+      cohortRepo.find({ where: { churchId, courseId: course.id } }),
+    ]);
+    if (previousCohorts.length === 0) return { previousStep, candidates: [] };
+
+    const [completed, taken] = await Promise.all([
+      enrollmentRepo.find({
+        where: { churchId, cohortId: In(previousCohorts.map(row => row.id)), status: EnrollmentStatus.COMPLETED },
+        order: { closedAt: 'DESC' },
+      }),
+      thisCohorts.length > 0
+        ? enrollmentRepo.find({
+            where: { churchId, cohortId: In(thisCohorts.map(row => row.id)), status: Not(EnrollmentStatus.DROPPED) },
+          })
+        : [],
+    ]);
+    const takenIds = new Set(taken.map(row => row.memberId));
+    // 같은 사람이 이전 STEP 을 두 번 수료했으면 최근 것 하나만
+    const latest = new Map<number, TrainingEnrollmentEntity>();
+    for (const row of completed) if (!takenIds.has(row.memberId) && !latest.has(row.memberId)) latest.set(row.memberId, row);
+    if (latest.size === 0) return { previousStep, candidates: [] };
+
+    const members = await DataSources.instance.getRepository(MemberEntity).find({ where: { churchId, id: In(Array.from(latest.keys())) } });
+    const cohortById = new Map(previousCohorts.map(row => [row.id, row]));
+    const courseById = new Map(previousCourses.map(row => [row.id, row.name]));
+
+    return {
+      previousStep,
+      candidates: members
+        .map(member => {
+          const row = latest.get(member.id)!;
+          const cohort = cohortById.get(row.cohortId);
+          return {
+            memberId: member.id,
+            memberName: member.name,
+            completedLabel: cohort ? `${courseById.get(cohort.courseId) ?? ''} ${cohort.name}`.trim() : '',
+            completedAt: row.closedAt ?? null,
+          };
+        })
+        .sort((a, b) => a.memberName.localeCompare(b.memberName, 'ko')),
+    };
   }
 
   private async load(churchId: number, cohortId: number): Promise<{ cohort: TrainingCohortEntity; course: TrainingCourseEntity }> {

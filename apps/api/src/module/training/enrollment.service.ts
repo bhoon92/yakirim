@@ -83,6 +83,8 @@ export class TrainingEnrollmentService {
         status: dto.status,
         closedAt: closed ? (dto.closedAt ?? this.today()) : null,
         note: dto.note ?? enrollment.note,
+        // 상태가 바뀌면 "넘긴 제안"도 무효다 — 수료를 취소했다 다시 수료하면 제안이 다시 떠야 한다
+        ...(dto.status !== enrollment.status ? { promotionDismissedAt: null } : {}),
       }
     );
     return (await this.repo().findOne({ where: { id: enrollmentId, churchId } }))!;

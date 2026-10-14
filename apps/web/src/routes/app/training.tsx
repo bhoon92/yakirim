@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GraduationCap, Pencil, Plus, Settings2, Trash2, X } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
 
 import { listMembers, type Member } from '@/api/members';
 import {
@@ -11,6 +12,8 @@ import {
   deleteCohort,
   enrollMembers,
   fetchCohortDetail,
+  fetchNextStepCandidates,
+  fetchPendingPromotions,
   listCohorts,
   listCourses,
   markTrainingAttendance,
@@ -52,7 +55,17 @@ export function TrainingPage() {
   const { can } = usePermissions();
   const canWrite = can('training:write');
   const [statusFilter, setStatusFilter] = useState<CohortStatus | 'all'>('all');
-  const [openCohortId, setOpenCohortId] = useState<number | null>(null);
+  // ?cohort=ID 로 들어오면 그 기수를 바로 연다 (대시보드 "놓친 제안"에서 넘어오는 길)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [openCohortId, setOpenCohortId] = useState<number | null>(() => Number(searchParams.get('cohort')) || null);
+  const showCohort = (cohortId: number) => {
+    setStatusFilter('all');
+    setOpenCohortId(cohortId);
+  };
+  const closeCohort = () => {
+    setOpenCohortId(null);
+    if (searchParams.has('cohort')) setSearchParams({}, { replace: true });
+  };
   const [creating, setCreating] = useState(false);
   const [managingCourses, setManagingCourses] = useState(false);
 
@@ -61,6 +74,7 @@ export function TrainingPage() {
     queryKey: ['training', 'cohorts', statusFilter],
     queryFn: () => listCohorts(statusFilter === 'all' ? undefined : { status: statusFilter }),
   });
+  const openCohortData = openCohortId !== null ? cohorts.find(item => item.id === openCohortId) : undefined;
 
   return (
     <div className="space-y-6">
@@ -99,6 +113,8 @@ export function TrainingPage() {
           </button>
         ))}
       </div>
+
+      <PendingPromotions onOpen={showCohort} />
 
       {creating && <CohortForm courses={courses} onClose={() => setCreating(false)} />}
 
@@ -139,10 +155,39 @@ export function TrainingPage() {
         </div>
       )}
 
-      {openCohortId !== null && (
-        <CohortDetailModal cohort={cohorts.find(item => item.id === openCohortId)!} onClose={() => setOpenCohortId(null)} />
-      )}
+      {/* 목록이 아직 안 왔거나 필터에 걸려 없으면 열지 않는다 */}
+      {openCohortData && <CohortDetailModal cohort={openCohortData} onClose={closeCohort} />}
     </div>
+  );
+}
+
+/**
+ * 놓친 수료 제안 (planning 00.7 D) — 수료했는데 아직 올리지도 넘기지도 않은 사람이 있는 기수.
+ * 누르면 그 기수가 열리고, 기수 화면 위쪽 제안 패널에서 바로 처리한다.
+ */
+function PendingPromotions({ onOpen }: { onOpen: (cohortId: number) => void }) {
+  const { data = [] } = useQuery({ queryKey: ['training', 'promotions', 'pending'], queryFn: fetchPendingPromotions });
+  if (data.length === 0) return null;
+  return (
+    <Card className="border-[#b9e5c0] bg-[#f3fbf4]">
+      <CardContent className="space-y-2 py-3">
+        <p className="text-sm font-semibold">수료 후 처리하지 않은 제안</p>
+        <div className="flex flex-wrap gap-1.5">
+          {data.map(row => {
+            const count = new Set([...row.candidates, ...row.residentCandidates].map(person => person.memberId)).size;
+            return (
+              <button
+                key={row.cohortId}
+                onClick={() => onOpen(row.cohortId)}
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1 text-xs font-medium hover:border-[var(--color-foreground)]"
+              >
+                {row.label} <span className="text-[var(--color-muted-foreground)] tabular-nums">{count}명</span>
+              </button>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -608,6 +653,12 @@ function EnrollPanel({ cohortId, enrolledMemberIds, onDone }: { cohortId: number
     onSuccess: onDone,
   });
 
+  // 이전 STEP 수료 · 이 과정 미수강 — 기수를 열 때 "누구를 부를지"를 사람이 기억하지 않아도 되게 (planning 00.7 E)
+  const { data: nextStep } = useQuery({
+    queryKey: ['training', 'cohort', cohortId, 'next-step'],
+    queryFn: () => fetchNextStepCandidates(cohortId),
+  });
+
   // 이미 이 기수에 등록된 교인은 후보에서 뺀다.
   // 서버는 중복을 조용히 건너뛰기만 해서(enroll 의 skipped), 그대로 두면 이미 등록된 사람을
   // 다시 고를 수 있고 "1명 등록"을 눌러도 명단이 그대로여서 아무 일도 안 일어난 것처럼 보인다.
@@ -616,9 +667,63 @@ function EnrollPanel({ cohortId, enrolledMemberIds, onDone }: { cohortId: number
   const items = found.filter(member => !enrolled.has(member.id));
   const hiddenCount = found.length - items.length;
 
+  const nextCandidates = (nextStep?.candidates ?? []).filter(candidate => !enrolled.has(candidate.memberId));
+  const allNextPicked = nextCandidates.length > 0 && nextCandidates.every(candidate => selected.includes(candidate.memberId));
+  const togglePick = (memberId: number) =>
+    setSelected(selected.includes(memberId) ? selected.filter(id => id !== memberId) : [...selected, memberId]);
+
   return (
     <Card>
       <CardContent className="space-y-3 py-4">
+        {nextStep?.previousStep && (
+          <div className="space-y-2 rounded-md border border-dashed border-[var(--color-border)] p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold">
+                STEP {nextStep.previousStep} 수료 · 아직 이 과정을 안 들은 사람{' '}
+                <span className="font-normal text-[var(--color-muted-foreground)] tabular-nums">{nextCandidates.length}명</span>
+              </p>
+              {nextCandidates.length > 0 && (
+                <button
+                  onClick={() =>
+                    setSelected(
+                      allNextPicked
+                        ? selected.filter(id => !nextCandidates.some(candidate => candidate.memberId === id))
+                        : Array.from(new Set([...selected, ...nextCandidates.map(candidate => candidate.memberId)]))
+                    )
+                  }
+                  className="text-xs text-[var(--color-muted-foreground)] underline-offset-2 hover:underline"
+                >
+                  {allNextPicked ? '모두 해제' : '모두 선택'}
+                </button>
+              )}
+            </div>
+            {nextCandidates.length === 0 ? (
+              <p className="text-[11px] text-[var(--color-muted-foreground)]">이전 STEP 수료자는 모두 이 과정을 듣고 있거나 들었습니다.</p>
+            ) : (
+              <div className="flex max-h-[84px] flex-wrap gap-1.5 overflow-y-auto">
+                {nextCandidates.map(candidate => {
+                  const picked = selected.includes(candidate.memberId);
+                  return (
+                    <button
+                      key={candidate.memberId}
+                      onClick={() => togglePick(candidate.memberId)}
+                      title={`${candidate.completedLabel} 수료${candidate.completedAt ? ` (${candidate.completedAt})` : ''}`}
+                      className={cn(
+                        'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                        picked
+                          ? 'border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)]'
+                          : 'border-[var(--color-border)] bg-[var(--color-background)] hover:bg-[var(--color-accent)]'
+                      )}
+                    >
+                      {candidate.memberName}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         <Input placeholder="이름으로 검색" value={query} onChange={event => setQuery(event.target.value)} />
         {/*
          * 결과 칸은 높이를 고정한다. 이 패널은 수강생 표 위에 있어서, 검색 결과 수에 따라
@@ -643,7 +748,7 @@ function EnrollPanel({ cohortId, enrolledMemberIds, onDone }: { cohortId: number
                   return (
                     <button
                       key={member.id}
-                      onClick={() => setSelected(picked ? selected.filter(id => id !== member.id) : [...selected, member.id])}
+                      onClick={() => togglePick(member.id)}
                       className={cn(
                         'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
                         picked
