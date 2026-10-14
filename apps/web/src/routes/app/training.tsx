@@ -418,132 +418,145 @@ function CohortDetailModal({ cohort, onClose }: { cohort: Cohort; onClose: () =>
              * 체크박스를 잘못 누르기 쉽다 — 머리글 행과 이름 열을 고정한다.
              * 두 축을 한 컨테이너에서 스크롤해야 sticky 기준이 하나로 잡힌다(overflow-x 만 주면 어긋난다).
              */
-            <div className="max-h-[58vh] overflow-auto">
-              <table className="w-full min-w-[560px] border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--color-border)]">
-                    <th className="sticky top-0 left-0 z-20 bg-[var(--color-background)] py-2 pr-3 text-left font-medium">수강생</th>
-                    {detail.sessions.map(session => (
-                      <th
-                        key={session.id}
-                        className="group sticky top-0 z-10 bg-[var(--color-background)] px-1 py-2 text-center font-medium"
-                      >
-                        <div className="flex items-center justify-center gap-0.5">
-                          <span className="tabular-nums">{session.sequence}</span>
-                          {canWrite && (
-                            <button
-                              onClick={() => {
-                                const marked = detail.roster.filter(row => row.attendedSessionIds.includes(session.id)).length;
-                                const warning = marked > 0 ? `\n이 회차 출석 ${marked}건도 함께 삭제됩니다.` : '';
-                                if (
-                                  window.confirm(`${session.sequence}회차를 삭제할까요?${warning}\n남은 회차 번호는 1부터 다시 매겨집니다.`)
-                                ) {
-                                  removeSessionMut.mutate(session.id);
-                                }
-                              }}
-                              disabled={removeSessionMut.isPending}
-                              className="rounded p-0.5 text-[var(--color-muted-foreground)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--color-destructive)] focus-visible:opacity-100"
-                              aria-label={`${session.sequence}회차 삭제`}
-                              title="회차 삭제"
-                            >
-                              <X className="size-3" />
-                            </button>
-                          )}
-                        </div>
-                        {canWrite ? (
-                          <input
-                            type="date"
-                            value={session.date ?? ''}
-                            onChange={event => sessionMut.mutate({ sessionId: session.id, date: event.target.value })}
-                            className="mt-1 w-[7.5rem] rounded border border-[var(--color-border)] px-1 py-0.5 text-[10px]"
-                          />
-                        ) : (
-                          <div className="text-[10px] text-[var(--color-muted-foreground)]">{session.date ?? '-'}</div>
-                        )}
-                      </th>
-                    ))}
-                    <th className="sticky top-0 z-10 bg-[var(--color-background)] px-2 py-2 text-right font-medium">출석률</th>
-                    <th className="sticky top-0 z-10 bg-[var(--color-background)] py-2 pl-2 text-right font-medium">상태</th>
-                    {canWrite && <th className="sticky top-0 z-10 w-8 bg-[var(--color-background)] py-2" aria-label="수강 취소" />}
-                  </tr>
-                </thead>
-                <tbody>
-                  {detail.roster.map(row => (
-                    <tr key={row.enrollmentId} className="border-b border-[var(--color-border)] last:border-0">
-                      <td className="sticky left-0 z-10 bg-[var(--color-background)] py-2 pr-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-2">
-                          <Avatar name={row.memberName} size="xs" />
-                          {row.memberName}
-                        </span>
-                      </td>
-                      {detail.sessions.map(session => {
-                        const present = row.attendedSessionIds.includes(session.id);
-                        return (
-                          <td key={session.id} className="px-1 py-2 text-center">
+            <>
+              {/* 폰: 회차 하나를 골라 그 회차 명단만 큰 체크리스트로 — 표는 한 화면에 회차 1.5개밖에 안 보였다 */}
+              <SessionChecklist
+                sessions={detail.sessions}
+                roster={detail.roster}
+                canWrite={canWrite}
+                busy={attendanceMut.isPending}
+                onToggle={(sessionId, enrollmentId, present) => attendanceMut.mutate({ sessionId, enrollmentId, present })}
+                onDate={(sessionId, date) => sessionMut.mutate({ sessionId, date })}
+              />
+              <div className="hidden max-h-[58vh] overflow-auto sm:block">
+                <table className="w-full min-w-[560px] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--color-border)]">
+                      <th className="sticky top-0 left-0 z-20 bg-[var(--color-background)] py-2 pr-3 text-left font-medium">수강생</th>
+                      {detail.sessions.map(session => (
+                        <th
+                          key={session.id}
+                          className="group sticky top-0 z-10 bg-[var(--color-background)] px-1 py-2 text-center font-medium"
+                        >
+                          <div className="flex items-center justify-center gap-0.5">
+                            <span className="tabular-nums">{session.sequence}</span>
+                            {canWrite && (
+                              <button
+                                onClick={() => {
+                                  const marked = detail.roster.filter(row => row.attendedSessionIds.includes(session.id)).length;
+                                  const warning = marked > 0 ? `\n이 회차 출석 ${marked}건도 함께 삭제됩니다.` : '';
+                                  if (
+                                    window.confirm(
+                                      `${session.sequence}회차를 삭제할까요?${warning}\n남은 회차 번호는 1부터 다시 매겨집니다.`
+                                    )
+                                  ) {
+                                    removeSessionMut.mutate(session.id);
+                                  }
+                                }}
+                                disabled={removeSessionMut.isPending}
+                                className="rounded p-0.5 text-[var(--color-muted-foreground)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--color-destructive)] focus-visible:opacity-100"
+                                aria-label={`${session.sequence}회차 삭제`}
+                                title="회차 삭제"
+                              >
+                                <X className="size-3" />
+                              </button>
+                            )}
+                          </div>
+                          {canWrite ? (
                             <input
-                              type="checkbox"
-                              checked={present}
-                              disabled={!canWrite || attendanceMut.isPending}
-                              onChange={() =>
-                                attendanceMut.mutate({
-                                  sessionId: session.id,
+                              type="date"
+                              value={session.date ?? ''}
+                              onChange={event => sessionMut.mutate({ sessionId: session.id, date: event.target.value })}
+                              className="mt-1 w-[7.5rem] rounded border border-[var(--color-border)] px-1 py-0.5 text-[10px]"
+                            />
+                          ) : (
+                            <div className="text-[10px] text-[var(--color-muted-foreground)]">{session.date ?? '-'}</div>
+                          )}
+                        </th>
+                      ))}
+                      <th className="sticky top-0 z-10 bg-[var(--color-background)] px-2 py-2 text-right font-medium">출석률</th>
+                      <th className="sticky top-0 z-10 bg-[var(--color-background)] py-2 pl-2 text-right font-medium">상태</th>
+                      {canWrite && <th className="sticky top-0 z-10 w-8 bg-[var(--color-background)] py-2" aria-label="수강 취소" />}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detail.roster.map(row => (
+                      <tr key={row.enrollmentId} className="border-b border-[var(--color-border)] last:border-0">
+                        <td className="sticky left-0 z-10 bg-[var(--color-background)] py-2 pr-3 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-2">
+                            <Avatar name={row.memberName} size="xs" />
+                            {row.memberName}
+                          </span>
+                        </td>
+                        {detail.sessions.map(session => {
+                          const present = row.attendedSessionIds.includes(session.id);
+                          return (
+                            <td key={session.id} className="px-1 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={present}
+                                disabled={!canWrite || attendanceMut.isPending}
+                                onChange={() =>
+                                  attendanceMut.mutate({
+                                    sessionId: session.id,
+                                    enrollmentId: row.enrollmentId,
+                                    present: !present,
+                                  })
+                                }
+                                className="size-4 accent-[var(--color-foreground)]"
+                              />
+                            </td>
+                          );
+                        })}
+                        <td className="px-2 py-2 text-right tabular-nums">{row.attendanceRate}%</td>
+                        <td className="py-2 pl-2 text-right">
+                          {/* 수료 버튼 하나만 두면 되돌리거나 중도포기로 옮길 방법이 없었다.
+                            세 상태를 모두 오갈 수 있게 드롭다운으로 바꿨다. */}
+                          {canWrite ? (
+                            <select
+                              value={row.status}
+                              disabled={enrollmentStatusMut.isPending}
+                              onChange={event =>
+                                enrollmentStatusMut.mutate({
                                   enrollmentId: row.enrollmentId,
-                                  present: !present,
+                                  status: event.target.value as EnrollmentStatus,
                                 })
                               }
-                              className="size-4 accent-[var(--color-foreground)]"
-                            />
-                          </td>
-                        );
-                      })}
-                      <td className="px-2 py-2 text-right tabular-nums">{row.attendanceRate}%</td>
-                      <td className="py-2 pl-2 text-right">
-                        {/* 수료 버튼 하나만 두면 되돌리거나 중도포기로 옮길 방법이 없었다.
-                            세 상태를 모두 오갈 수 있게 드롭다운으로 바꿨다. */}
-                        {canWrite ? (
-                          <select
-                            value={row.status}
-                            disabled={enrollmentStatusMut.isPending}
-                            onChange={event =>
-                              enrollmentStatusMut.mutate({
-                                enrollmentId: row.enrollmentId,
-                                status: event.target.value as EnrollmentStatus,
-                              })
-                            }
-                            className="rounded-md bg-[var(--color-background)] px-2 py-1 text-xs shadow-[var(--shadow-input)] outline-none focus-visible:shadow-[var(--shadow-input-focus)]"
-                          >
-                            {(['enrolled', 'completed', 'dropped'] as EnrollmentStatus[]).map(status => (
-                              <option key={status} value={status}>
-                                {ENROLLMENT_STATUS_LABEL[status]}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <Badge tone={row.status === 'completed' ? 'success' : 'muted'}>{ENROLLMENT_STATUS_LABEL[row.status]}</Badge>
-                        )}
-                      </td>
-                      {canWrite && (
-                        <td className="py-2 pl-1 text-right">
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`${row.memberName} 님을 이 기수에서 제외할까요?\n출석 기록도 함께 삭제됩니다.`)) {
-                                removeEnrollmentMut.mutate(row.enrollmentId);
-                              }
-                            }}
-                            disabled={removeEnrollmentMut.isPending}
-                            className="rounded-full p-1 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-destructive)]"
-                            aria-label={`${row.memberName} 수강 취소`}
-                            title="수강 취소"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
+                              className="rounded-md bg-[var(--color-background)] px-2 py-1 text-xs shadow-[var(--shadow-input)] outline-none focus-visible:shadow-[var(--shadow-input-focus)]"
+                            >
+                              {(['enrolled', 'completed', 'dropped'] as EnrollmentStatus[]).map(status => (
+                                <option key={status} value={status}>
+                                  {ENROLLMENT_STATUS_LABEL[status]}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <Badge tone={row.status === 'completed' ? 'success' : 'muted'}>{ENROLLMENT_STATUS_LABEL[row.status]}</Badge>
+                          )}
                         </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        {canWrite && (
+                          <td className="py-2 pl-1 text-right">
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`${row.memberName} 님을 이 기수에서 제외할까요?\n출석 기록도 함께 삭제됩니다.`)) {
+                                  removeEnrollmentMut.mutate(row.enrollmentId);
+                                }
+                              }}
+                              disabled={removeEnrollmentMut.isPending}
+                              className="rounded-full p-1 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-destructive)]"
+                              aria-label={`${row.memberName} 수강 취소`}
+                              title="수강 취소"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
           <p className="text-xs text-[var(--color-muted-foreground)]">
@@ -551,6 +564,98 @@ function CohortDetailModal({ cohort, onClose }: { cohort: Cohort; onClose: () =>
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * 폰 전용 회차 체크리스트. 현장에서 한 회차 출석을 부르며 체크하는 흐름에 맞춘다.
+ * 기본 회차는 오늘(없으면 가장 최근에 지난 회차, 그것도 없으면 첫 회차). 수료 상태는 데스크탑 표에서 바꾼다.
+ */
+function SessionChecklist({
+  sessions,
+  roster,
+  canWrite,
+  busy,
+  onToggle,
+  onDate,
+}: {
+  sessions: { id: number; sequence: number; date: string | null }[];
+  roster: { enrollmentId: number; memberName: string; attendedSessionIds: number[]; attendanceRate: number; status: EnrollmentStatus }[];
+  canWrite: boolean;
+  busy: boolean;
+  onToggle: (sessionId: number, enrollmentId: number, present: boolean) => void;
+  onDate: (sessionId: number, date: string) => void;
+}) {
+  const today = todayString();
+  const defaultSession =
+    sessions.find(session => session.date === today) ??
+    [...sessions].filter(session => session.date && session.date < today).sort((a, b) => b.date!.localeCompare(a.date!))[0] ??
+    sessions[0];
+  const [pickedId, setPickedId] = useState<number | null>(null);
+  const session = sessions.find(row => row.id === pickedId) ?? defaultSession;
+  if (!session) return <p className="text-sm text-[var(--color-muted-foreground)] sm:hidden">회차가 없습니다.</p>;
+
+  const present = roster.filter(row => row.attendedSessionIds.includes(session.id)).length;
+
+  return (
+    <div className="space-y-3 sm:hidden">
+      <div className="-mx-6 flex gap-1.5 overflow-x-auto px-6 pb-1">
+        {sessions.map(row => (
+          <button
+            key={row.id}
+            onClick={() => setPickedId(row.id)}
+            className={cn(
+              'shrink-0 rounded-full border px-3 py-1 text-xs font-medium tabular-nums transition-colors',
+              row.id === session.id
+                ? 'border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)]'
+                : 'border-[var(--color-border)]'
+            )}
+          >
+            {row.sequence}회{row.date ? ` · ${row.date.slice(5).replace('-', '/')}` : ''}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between gap-2">
+        {canWrite ? (
+          <input
+            type="date"
+            value={session.date ?? ''}
+            onChange={event => onDate(session.id, event.target.value)}
+            className="rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm"
+          />
+        ) : (
+          <span className="text-sm tabular-nums">{session.date ?? '날짜 미정'}</span>
+        )}
+        <span className="text-sm tabular-nums">
+          출석 <strong>{present}</strong> / {roster.length}
+        </span>
+      </div>
+
+      <ul className="divide-y divide-[var(--color-border)] rounded-xl border border-[var(--color-border)]">
+        {roster.map(row => {
+          const checked = row.attendedSessionIds.includes(session.id);
+          return (
+            <li key={row.enrollmentId}>
+              <label className={cn('flex items-center gap-3 px-3 py-3', canWrite && 'cursor-pointer active:bg-[var(--color-muted)]')}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={!canWrite || busy}
+                  onChange={() => onToggle(session.id, row.enrollmentId, !checked)}
+                  className="size-5 accent-[var(--color-foreground)]"
+                />
+                <Avatar name={row.memberName} size="xs" />
+                <span className="min-w-0 flex-1 truncate text-sm">{row.memberName}</span>
+                <span className="shrink-0 text-xs text-[var(--color-muted-foreground)] tabular-nums">
+                  {row.status === 'enrolled' ? `${row.attendanceRate}%` : ENROLLMENT_STATUS_LABEL[row.status]}
+                </span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

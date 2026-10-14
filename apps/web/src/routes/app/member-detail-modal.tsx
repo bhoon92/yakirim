@@ -72,9 +72,7 @@ export function MemberDetailModal({ memberId, onClose }: { memberId: number; onC
                */}
               <PositionSection memberId={memberId} current={member.position.current} history={member.position.history} />
 
-              {KINDS.map(kind => (
-                <AffiliationSection key={kind} kind={kind} memberId={memberId} items={affiliationsByKind(member.affiliations, kind)} />
-              ))}
+              <AffiliationsSection memberId={memberId} affiliations={member.affiliations} />
 
               <ShepherdSection memberId={memberId} />
 
@@ -313,79 +311,117 @@ function affiliationsByKind(
   }
 }
 
-function AffiliationSection({ kind, memberId, items }: { kind: AffiliationKind; memberId: number; items: AffiliationSummary[] }) {
+/**
+ * 소속 — 기관·사역팀·공동체를 한 칸에.
+ * 예전에는 종류마다 칸을 따로 둬서 소속이 없는 대부분의 교인에게 "소속 없음"이 세 번 떴고,
+ * 폰에서는 그 아래 양육기록(간사가 가장 자주 쓰는 곳)이 스크롤 밖으로 밀렸다.
+ * 있는 종류만 한 줄씩 보여주고, 추가할 때 종류를 고른다.
+ */
+function AffiliationsSection({
+  memberId,
+  affiliations,
+}: {
+  memberId: number;
+  affiliations: { departments: AffiliationSummary[]; ministries: AffiliationSummary[]; smallGroups: AffiliationSummary[] };
+}) {
   const orgLabels = useOrgLabels();
   const queryClient = useQueryClient();
   const { can } = usePermissions();
   const canWrite = can('member:write');
   const [adding, setAdding] = useState(false);
+  const [addKind, setAddKind] = useState<AffiliationKind>('ministry');
   const currentYear = new Date().getFullYear();
 
   const { data: references = [] } = useQuery({
-    queryKey: ['references', kind, currentYear],
-    queryFn: () => listReferences(kind, currentYear),
+    queryKey: ['references', addKind, currentYear],
+    queryFn: () => listReferences(addKind, currentYear),
     enabled: adding,
   });
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['member', memberId] });
+    queryClient.invalidateQueries({ queryKey: ['members'] });
+    queryClient.invalidateQueries({ queryKey: ['residents'] });
+  };
+
   const assignMut = useMutation({
-    mutationFn: (referenceId: number) => assignAffiliation(memberId, kind, { referenceId }),
+    mutationFn: (referenceId: number) => assignAffiliation(memberId, addKind, { referenceId }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['member', memberId] });
-      queryClient.invalidateQueries({ queryKey: ['members'] });
+      invalidate();
       setAdding(false);
     },
     onError: (error: Error) => alert(`소속 추가 실패: ${error.message}`),
   });
 
   const endMut = useMutation({
-    mutationFn: (referenceId: number) => endAffiliation(memberId, kind, referenceId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['member', memberId] });
-      queryClient.invalidateQueries({ queryKey: ['members'] });
-    },
+    mutationFn: ({ kind, referenceId }: { kind: AffiliationKind; referenceId: number }) => endAffiliation(memberId, kind, referenceId),
+    onSuccess: invalidate,
     onError: (error: Error) => alert(`소속 종료 실패: ${error.message}`),
   });
 
   const leaderMut = useMutation({
-    mutationFn: ({ referenceId, isLeader }: { referenceId: number; isLeader: boolean }) =>
+    mutationFn: ({ kind, referenceId, isLeader }: { kind: AffiliationKind; referenceId: number; isLeader: boolean }) =>
       setAffiliationLeader(memberId, kind, referenceId, isLeader),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['member', memberId] });
-      queryClient.invalidateQueries({ queryKey: ['members'] });
-    },
+    onSuccess: invalidate,
     onError: (error: Error) => alert(`리더 설정 실패: ${error.message}`),
   });
 
-  const assignedIds = new Set(items.map(item => item.referenceId));
+  const filled = KINDS.map(kind => ({ kind, items: affiliationsByKind(affiliations, kind) })).filter(row => row.items.length > 0);
+  const assignedIds = new Set(affiliationsByKind(affiliations, addKind).map(item => item.referenceId));
   const available = references.filter((reference: Reference) => !assignedIds.has(reference.id));
 
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-semibold">{orgLabels[kind]}</h3>
+        <h3 className="text-sm font-semibold">소속</h3>
         {canWrite && <PanelToggle open={adding} onToggle={() => setAdding(!adding)} label="추가" />}
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {items.length === 0 && !adding && <span className="text-xs text-[var(--color-muted-foreground)]">소속 없음</span>}
-        {items.map(affiliation => (
-          <AffiliationChip
-            key={affiliation.id}
-            label={affiliation.referenceName ?? '(이름 없음)'}
-            seed={affiliation.referenceId}
-            leader={affiliation.isLeader}
-            canWrite={canWrite}
-            onToggleLeader={() => leaderMut.mutate({ referenceId: affiliation.referenceId, isLeader: !affiliation.isLeader })}
-            onRemove={() => endMut.mutate(affiliation.referenceId)}
-          />
+      {filled.length === 0 && !adding && <span className="text-xs text-[var(--color-muted-foreground)]">소속 없음</span>}
+      <div className="space-y-1.5">
+        {filled.map(row => (
+          <div key={row.kind} className="flex items-start gap-2">
+            <span className="w-14 shrink-0 pt-1 text-xs text-[var(--color-muted-foreground)]">{orgLabels[row.kind]}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {row.items.map(affiliation => (
+                <AffiliationChip
+                  key={affiliation.id}
+                  label={affiliation.referenceName ?? '(이름 없음)'}
+                  seed={affiliation.referenceId}
+                  leader={affiliation.isLeader}
+                  canWrite={canWrite}
+                  onToggleLeader={() =>
+                    leaderMut.mutate({ kind: row.kind, referenceId: affiliation.referenceId, isLeader: !affiliation.isLeader })
+                  }
+                  onRemove={() => endMut.mutate({ kind: row.kind, referenceId: affiliation.referenceId })}
+                />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 
       {adding && (
-        <div className="mt-3 rounded-xl border border-dashed border-[var(--color-border)] p-3">
+        <div className="mt-3 space-y-2.5 rounded-xl border border-dashed border-[var(--color-border)] p-3">
+          <div className="flex gap-1">
+            {KINDS.map(kind => (
+              <button
+                key={kind}
+                onClick={() => setAddKind(kind)}
+                className={cn(
+                  'rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
+                  addKind === kind
+                    ? 'border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)]'
+                    : 'border-[var(--color-border)] hover:bg-[var(--color-muted)]'
+                )}
+              >
+                {orgLabels[kind]}
+              </button>
+            ))}
+          </div>
           {available.length === 0 ? (
             <p className="text-xs text-[var(--color-muted-foreground)]">
-              추가 가능한 {orgLabels[kind]}이 없습니다. 먼저 설정에서 등록하세요.
+              추가 가능한 {orgLabels[addKind]}이 없습니다. 조직도에서 먼저 만드세요.
             </p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
