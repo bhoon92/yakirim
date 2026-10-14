@@ -16,6 +16,9 @@ export POSTGRES_DB_NAME=yakirim
 export JWT_CMS_ACCESS_SECRET_KEY=local-dev-access-secret-change-in-production
 export JWT_CMS_REFRESH_SECRET_KEY=local-dev-refresh-secret-change-in-production
 
+# 구글 캘린더 토큰 암호화 (비워두면 localdev 기본값을 쓴다)
+export TOKEN_ENCRYPTION_KEY=
+
 # Google OAuth (로그인)
 # prod redirect: https://YOUR_DOMAIN/api/auth/google/callback
 export GOOGLE_CLIENT_ID=your-google-client-id
@@ -47,6 +50,7 @@ export AWS_SECRET_ACCESS_KEY=
 #
 # JWT_CMS_ACCESS_SECRET_KEY=xxx          ← openssl rand -base64 48
 # JWT_CMS_REFRESH_SECRET_KEY=xxx         ← openssl rand -base64 48 (별도 생성)
+# TOKEN_ENCRYPTION_KEY=xxx               ← openssl rand -base64 32 · 한 번 정하면 바꾸지 말 것
 #
 # GOOGLE_CLIENT_ID=xxx
 # GOOGLE_CLIENT_SECRET=xxx

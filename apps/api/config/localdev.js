@@ -32,6 +32,9 @@ module.exports = {
   web: {
     baseUrl: process.env.WEB_BASE_URL || 'http://localhost:5173',
   },
+  tokenEncryption: {
+    key: process.env.TOKEN_ENCRYPTION_KEY || 'local-dev-token-encryption-key',
+  },
   s3: {
     region: process.env.AWS_REGION || 'ap-northeast-2',
     bucket: process.env.AWS_S3_BUCKET || 'yakirim-photos',
