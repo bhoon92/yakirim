@@ -28,7 +28,11 @@ export function CareNoteSection({ memberId }: { memberId: number }) {
     queryFn: () => listCareNotes(memberId),
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['care-notes', memberId] });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['care-notes', memberId] });
+    // "내가 맡은 사람"·간사 상세의 순서가 마지막 기록일로 정해진다
+    queryClient.invalidateQueries({ queryKey: ['flock'] });
+  };
 
   const deleteMut = useMutation({
     mutationFn: (id: number) => deleteCareNote(memberId, id),

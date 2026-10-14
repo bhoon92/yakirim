@@ -6,6 +6,7 @@ import { Link } from 'react-router';
 
 import { fetchHomeDashboard, type HomeActivityItem, type HomeScheduleItem } from '@/api/dashboard';
 import { fetchStalledMembers } from '@/api/members';
+import { fetchMyFlock } from '@/api/shepherds';
 import { fetchPendingPromotions } from '@/api/training';
 import { MemberDetailModal } from './member-detail-modal';
 import { useAuth } from '@/auth/auth-context';
@@ -93,6 +94,9 @@ export function DashboardPage() {
       {/* flex 홈 구조: 넓은 본문 + 좁은 우측 레일 */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
+          {/* 간사로 연결된 계정이면 교회 전체 현황보다 "내 사람"이 먼저다 */}
+          <MyFlockCard onOpenMember={setOpenMemberId} />
+
           <SectionCard title="양성 파이프라인" hint={`총 ${pipelineTotal}명`} actionLabel="교인 보기" actionTo="/app/members">
             {pipeline.length === 0 ? (
               <EmptyRow>등록된 교인이 없습니다.</EmptyRow>
@@ -284,6 +288,60 @@ function StalledCard({ onOpenMember }: { onOpenMember: (id: number) => void }) {
           </ul>
           {rows.length > shown.length && (
             <p className="pt-1 text-xs text-[var(--color-muted-foreground)]">외 {rows.length - shown.length}명</p>
+          )}
+        </>
+      )}
+    </SectionCard>
+  );
+}
+
+/** 이 날수 넘게 기록이 없으면 연락할 때 — "내가 맡은 사람" 화면과 같은 기준. */
+const QUIET_DAYS = 30;
+
+/** 로그인한 간사의 "연락할 때가 된 사람" — 간사가 아니면(계정 연결 없음) 카드 자체가 없다. */
+function MyFlockCard({ onOpenMember }: { onOpenMember: (id: number) => void }) {
+  const { state } = useAuth();
+  const isShepherd = state.status === 'authenticated' && Boolean(state.self?.residentId);
+  const { data } = useQuery({ queryKey: ['flock', 'me'], queryFn: fetchMyFlock, enabled: isShepherd });
+  if (!isShepherd || !data) return null;
+
+  const due = data.flock.filter(row => !row.lastCareNoteDate || row.daysSinceContact >= QUIET_DAYS);
+  const shown = due.slice(0, 4);
+
+  return (
+    <SectionCard
+      title="연락할 때가 된 사람"
+      hint={`맡은 ${data.flock.length}명 중 ${due.length}명`}
+      actionLabel="내가 맡은 사람"
+      actionTo="/app/my-flock"
+    >
+      {data.flock.length === 0 ? (
+        <EmptyRow>아직 맡은 성도가 없습니다.</EmptyRow>
+      ) : due.length === 0 ? (
+        <EmptyRow>맡은 사람 모두 최근 {QUIET_DAYS}일 안에 만났습니다.</EmptyRow>
+      ) : (
+        <>
+          <ul className="divide-y divide-[var(--color-border)]">
+            {shown.map(row => (
+              <li key={row.memberId}>
+                <button
+                  onClick={() => onOpenMember(row.memberId)}
+                  className="flex w-full items-center gap-3 py-2.5 text-left transition-colors hover:bg-[var(--color-muted)]"
+                >
+                  <Avatar name={row.memberName} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{row.memberName}</div>
+                    <div className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">{row.statusName}</div>
+                  </div>
+                  <div className="shrink-0 text-right text-sm font-semibold whitespace-nowrap text-[#8a5700] tabular-nums">
+                    {row.lastCareNoteDate ? `${row.daysSinceContact}일 전` : '기록 없음'}
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {due.length > shown.length && (
+            <p className="pt-1 text-xs text-[var(--color-muted-foreground)]">외 {due.length - shown.length}명</p>
           )}
         </>
       )}
