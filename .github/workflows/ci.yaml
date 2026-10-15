@@ -75,6 +75,10 @@ jobs:
       - name: API 빌드
         run: pnpm build:api
 
+      # 정체 판정·회차 재정렬·수료 제안처럼 SQL 에 걸린 로직은 실제 Postgres 에서 검증한다 (별도 DB yakirim_test)
+      - name: API 테스트
+        run: pnpm --filter @yakirim/api test
+
       - name: 빈 DB 에서 운영 모드로 부팅 — 마이그레이션 전체 실행 + 헬스체크
         working-directory: apps/api
         env:

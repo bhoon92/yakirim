@@ -138,7 +138,7 @@ PR(develop·main 대상)과 develop·main 푸시마다: lint·prettier → 웹 �
 ### 2.4 내가 남긴 미완성
 | 항목 | 상태 |
 | --- | --- |
-| **테스트** | 여전히 0개. 사용자가 "나중에"로 미룸. 회차 재정렬·`countsAsActive` 연동·정체 판정이 1순위 |
+| **테스트** | ✅ 2026-10-15 jest + **실제 Postgres**(`yakirim_test`, 매 실행 새로 만듦). 정체 판정(대시보드↔목록 대조)·상태 이력·회차 생성/재정렬·첫 출석 자동 시작·수료 제안·날짜·409. 남은 1순위: 파송 `countsAsActive` 연동 |
 | 300명 데모 데이터 | 유지 여부 미결. 지우려면 §6 스니펫 |
 | 기록 종류 기본값 | `파송보고` 가 아직 기본에 있다. 교인 카드에서 뺄지 사용자 답변 대기 |
 | ~~소속 3블록~~ | ✅ 2026-10-14 "소속" 한 칸으로 합침 (있는 종류만 한 줄씩) |
@@ -226,8 +226,9 @@ pg 드라이버가 `date` 컬럼을 **JS `Date` 로 주는 경우**(원시 쿼�
   경유지: 교인 등록·수정 / 파송 단계 자동 전환 / 선교사 등록 시 교인 동시 생성 / 엑셀 가져오기
 - `member_status_history` 는 **열린 구간(`end_date IS NULL`)이 현재 상태**이고 `member.status_id` 와 일치해야 한다.
   부분 유니크 인덱스 때문에 **닫고 나서 열어야** 한다
-- **정체 판정 로직이 두 곳에 있다** — `listStalled()` 와 `MemberService.list()` 의 `stalled` 필터.
-  한 곳만 고치면 대시보드 숫자와 목록 인원이 어긋난다. 다음에 손댈 때 합칠 것
+- **정체 판정은 `STALLED_CONDITION` 한 문장**(member-status-history.service) — `listStalled()` 와 `MemberService.list()` 의 `stalled` 필터가 같이 쓴다.
+  "오늘"은 DB `CURRENT_DATE` 가 아니라 `stalledParams()` 로 앱이 넘긴다(운영 DB 는 UTC). 두 결과가 같은지는 테스트가 대조한다
+- **Enter 로 저장하는 입력칸은 `isSubmitEnter(event)`** — 맨 `event.key === 'Enter'` 는 웹 lint 가 막는다(한글 조합 중 Enter 두 번 → 요청 두 번)
 - **훈련 출석 ≠ 예배 출석**: `training_attendance` vs `attendance`. 합치지 말 것
 - **수료는 자동 판정하지 않는다** — 출석률은 참고용
 - **파송 집계 기준은 `missionary_stage.counts_as_active` 플래그**(이름 아님).
@@ -293,6 +294,7 @@ pnpm dev:api
 pnpm dev:web
 
 # 검증 (서버에 영향 없음)
+cd apps/api && pnpm test        # 테스트 — 로컬 Postgres 에 yakirim_test 를 새로 만들어 쓴다(개발 DB 는 안 건드림)
 cd apps/web && npx tsc -b && npx eslint src
 
 # 마이그레이션 — 손으로 작성 후

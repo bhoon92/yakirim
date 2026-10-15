@@ -6,6 +6,24 @@ import { MemberEntity } from '@src/database/entities/member.entity';
 import { MemberStatusHistoryEntity } from '@src/database/entities/member-status-history.entity';
 import { MemberStatusEntity } from '@src/database/entities/member-status.entity';
 
+/**
+ * 정체 판정 — 열린 구간 `h`(member_status_history)와 그 상태 `s`(member_status)에 거는 조건.
+ * 대시보드 "정체된 사람"(listStalled)과 교인 목록 `stalled=true` 필터가 **이 한 문장을 같이 쓴다** —
+ * 따로 쓰면 한쪽만 고쳐져 카드 숫자와 목록 인원이 어긋난다(member-status-history.service.spec 이 둘을 대조한다).
+ * 기준일수가 null 인 상태(도착점·이탈)는 애초에 정체가 아니다.
+ *
+ * "오늘"은 DB 의 CURRENT_DATE 가 아니라 앱이 넘긴다(stalledParams). 운영 DB 는 UTC 라
+ * 한국 시간 00~09시에 CURRENT_DATE 가 어제가 되어 판정이 하루 밀렸다(HANDOFF §3.3 과 같은 문제).
+ */
+export const STALLED_CONDITION = `h.end_date IS NULL
+  AND s.stalls_after_days IS NOT NULL
+  AND h.start_date <= (:stalledToday)::date - (s.stalls_after_days || ' days')::interval`;
+
+/** STALLED_CONDITION 의 파라미터. */
+export function stalledParams(today: string = todayString()): { stalledToday: string } {
+  return { stalledToday: today };
+}
+
 /** 한 사람의 상태 구간 하나. */
 export type StatusPeriod = {
   id: number;
@@ -114,9 +132,7 @@ export class MemberStatusHistoryService {
         's.stalls_after_days AS "threshold"',
       ])
       .where('h.church_id = :churchId', { churchId })
-      .andWhere('h.end_date IS NULL')
-      .andWhere('s.stalls_after_days IS NOT NULL')
-      .andWhere("h.start_date <= CURRENT_DATE - (s.stalls_after_days || ' days')::interval")
+      .andWhere(STALLED_CONDITION, stalledParams(this.today()))
       .orderBy('h.start_date', 'ASC')
       .limit(limit)
       .getRawMany()) as { memberId: number; memberName: string; statusId: number; statusName: string; since: string; threshold: number }[];

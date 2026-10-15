@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { PanelToggle } from '@/components/ui/panel-toggle';
 import { TagChip } from '@/components/ui/tag-chip';
 import { todayString } from '@/lib/date';
+import { isSubmitEnter } from '@/lib/keyboard';
 import { useOrgLabels } from '@/lib/org-labels';
 import { usePermissions } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
@@ -155,7 +156,7 @@ export function ResidentsPage() {
                   tabIndex={0}
                   onClick={() => setOpenId(resident.id)}
                   onKeyDown={event => {
-                    if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                    if (event.target === event.currentTarget && (isSubmitEnter(event) || event.key === ' ')) {
                       event.preventDefault();
                       setOpenId(resident.id);
                     }
