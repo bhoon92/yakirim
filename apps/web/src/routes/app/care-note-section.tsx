@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { PanelToggle } from '@/components/ui/panel-toggle';
 import { TagChip, TagChipButton } from '@/components/ui/tag-chip';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/lib/permissions';
 import { todayString } from '@/lib/date';
@@ -163,21 +164,21 @@ function NoteForm({ memberId, onDone, onCancel }: { memberId: number; onDone: ()
         <Input placeholder="장소 (선택)" value={location} onChange={event => setLocation(event.target.value)} />
       </div>
 
-      <textarea
+      <Textarea
         placeholder="본문"
         value={content}
         onChange={event => setContent(event.target.value)}
         rows={3}
         className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm outline-none focus:border-[var(--color-foreground)]"
       />
-      <textarea
+      <Textarea
         placeholder="기도제목 (선택)"
         value={prayerRequest}
         onChange={event => setPrayerRequest(event.target.value)}
         rows={2}
         className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm outline-none focus:border-[var(--color-foreground)]"
       />
-      <textarea
+      <Textarea
         placeholder="현재 상황 (선택)"
         value={statusNote}
         onChange={event => setStatusNote(event.target.value)}
