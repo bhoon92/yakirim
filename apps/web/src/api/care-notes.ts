@@ -64,3 +64,36 @@ export async function listCareNoteMentions(memberId: number): Promise<CareNoteMe
   if (!res.ok) throw new Error(`list care note mentions ${res.status}`);
   return res.json();
 }
+
+// ── 기록 양식 ────────────────────────────
+export type CareNoteTemplate = {
+  id: number;
+  name: string;
+  typeId: number | null;
+  content: string;
+  prayerRequest: string | null;
+  statusNote: string | null;
+};
+
+export async function listCareNoteTemplates(): Promise<CareNoteTemplate[]> {
+  const res = await fetch('/api/care-note-templates', { credentials: 'include' });
+  if (!res.ok) throw new Error(`list care note templates ${res.status}`);
+  return res.json();
+}
+
+export async function createCareNoteTemplate(payload: Omit<CareNoteTemplate, 'id'>): Promise<CareNoteTemplate> {
+  const res = await fetch('/api/care-note-templates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  if (res.status === 409) throw new Error('같은 이름의 양식이 이미 있습니다.');
+  if (!res.ok) throw new Error(`create care note template ${res.status}`);
+  return res.json();
+}
+
+export async function deleteCareNoteTemplate(id: number): Promise<void> {
+  const res = await fetch(`/api/care-note-templates/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (!res.ok) throw new Error(`delete care note template ${res.status}`);
+}
