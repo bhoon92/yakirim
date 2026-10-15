@@ -42,6 +42,22 @@ export class MemberController {
   }
 
   // ':id' 보다 먼저 선언한다 — 정적 세그먼트가 먼저 잡히게.
+  @Get('pipeline')
+  @Permissions('member:read')
+  @ApiOperation({
+    summary: '파이프라인 보드',
+    description: [
+      '재적상태별 칸에 교인 카드를 담아 돌려준다 (노션 보드 보기). 칸 순서는 재적상태 정렬순서.',
+      '',
+      '- 카드는 지금 단계에 머문 일수가 긴 순서, 칸마다 최대 50장. 전체 인원은 `count`, 정체 인원은 `stalledCount`.',
+      '- `stalled` 판정은 `GET /members/stalled` 와 같은 기준이다.',
+      '- 단계를 옮기려면 `PATCH /members/:id` 에 `statusId` 를 보낸다 — 이력이 함께 남는다.',
+    ].join('\n'),
+  })
+  pipeline(@RequireChurch() auth: AuthContext & { churchId: number }) {
+    return this.members.pipelineBoard(auth.churchId);
+  }
+
   @Get('stalled')
   @Permissions('member:read')
   @ApiOperation({

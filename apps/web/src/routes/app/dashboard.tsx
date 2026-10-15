@@ -97,7 +97,7 @@ export function DashboardPage() {
           {/* 간사로 연결된 계정이면 교회 전체 현황보다 "내 사람"이 먼저다 */}
           <MyFlockCard onOpenMember={setOpenMemberId} />
 
-          <SectionCard title="양성 파이프라인" hint={`총 ${pipelineTotal}명`} actionLabel="교인 보기" actionTo="/app/members">
+          <SectionCard title="양성 파이프라인" hint={`총 ${pipelineTotal}명`} actionLabel="보드로 보기" actionTo="/app/pipeline">
             {pipeline.length === 0 ? (
               <EmptyRow>등록된 교인이 없습니다.</EmptyRow>
             ) : (

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Brackets, SelectQueryBuilder } from 'typeorm';
+import { daysBetween, toDateString, todayString } from '@src/common/date';
 import { DataSources } from '@src/database/data-sources';
 import { MemberEntity } from '@src/database/entities/member.entity';
 import { MemberStatusEntity } from '@src/database/entities/member-status.entity';
@@ -22,6 +23,31 @@ export type MemberView = MemberEntity &
     /** 지금 담당 간사. 없으면 null */
     shepherd: ShepherdTag | null;
   };
+
+/** 파이프라인 보드의 카드 한 장. */
+export type PipelineCard = {
+  id: number;
+  name: string;
+  /** 지금 단계에 들어온 날 (이력이 없으면 null) */
+  since: string | null;
+  days: number | null;
+  /** 정체 — 이 단계의 기준일수를 넘김. 판정은 STALLED_CONDITION 과 같다(테스트가 대조). */
+  stalled: boolean;
+  shepherdName: string | null;
+};
+
+/** 파이프라인 보드의 칸 하나 = 재적상태 하나. */
+export type PipelineColumn = {
+  statusId: number;
+  name: string;
+  stallsAfterDays: number | null;
+  count: number;
+  stalledCount: number;
+  /** 오래 머문 순으로 최대 PIPELINE_CARDS_PER_COLUMN 장. 나머지는 count 로만 알린다. */
+  members: PipelineCard[];
+};
+
+export const PIPELINE_CARDS_PER_COLUMN = 50;
 
 @Injectable()
 export class MemberService {
@@ -174,6 +200,59 @@ export class MemberService {
   }
 
   /** 교회 재적상태 map (id → 상태). */
+  /**
+   * 노션 보드처럼 재적상태별 칸에 교인 카드를 놓는다. 숨긴(비활성) 상태는 사람이 남아 있을 때만 칸을 보인다.
+   * 단계 이동은 따로 만들지 않는다 — 교인 수정(statusId)이 이미 이력(record)을 남긴다.
+   */
+  async pipelineBoard(churchId: number): Promise<PipelineColumn[]> {
+    const [statuses, rows] = await Promise.all([
+      this.statusRepo().find({ where: { churchId }, order: { sortOrder: 'ASC', id: 'ASC' } }),
+      DataSources.instance.query(
+        `SELECT m.id, m.name, m.status_id AS "statusId", h.start_date AS "since"
+           FROM member m
+           LEFT JOIN member_status_history h
+             ON h.member_id = m.id AND h.church_id = m.church_id AND h.end_date IS NULL AND h.deleted_at IS NULL
+          WHERE m.church_id = $1 AND m.deleted_at IS NULL`,
+        [churchId]
+      ) as Promise<{ id: number; name: string; statusId: number; since: string | Date | null }[]>,
+    ]);
+    const today = todayString();
+    const shepherds = await this.shepherds.currentForMembers(
+      churchId,
+      rows.map(row => row.id)
+    );
+
+    return statuses
+      .map(status => {
+        const cards: PipelineCard[] = rows
+          .filter(row => row.statusId === status.id)
+          .map(row => {
+            const since = row.since ? toDateString(row.since) : null;
+            const days = since ? daysBetween(since, today) : null;
+            return {
+              id: row.id,
+              name: row.name,
+              since,
+              days,
+              stalled: status.stallsAfterDays != null && days != null && days >= status.stallsAfterDays,
+              shepherdName: shepherds.get(row.id)?.name ?? null,
+            };
+          })
+          .sort((a, b) => (b.days ?? -1) - (a.days ?? -1) || a.name.localeCompare(b.name, 'ko'));
+        const column: PipelineColumn = {
+          statusId: status.id,
+          name: status.name,
+          stallsAfterDays: status.stallsAfterDays ?? null,
+          count: cards.length,
+          stalledCount: cards.filter(card => card.stalled).length,
+          members: cards.slice(0, PIPELINE_CARDS_PER_COLUMN),
+        };
+        return { column, visible: status.isActive || cards.length > 0 };
+      })
+      .filter(entry => entry.visible)
+      .map(entry => entry.column);
+  }
+
   private async statusMap(churchId: number): Promise<Map<number, MemberStatusEntity>> {
     const statuses = await this.statusRepo().find({ where: { churchId } });
     return new Map(statuses.map(status => [status.id, status]));
