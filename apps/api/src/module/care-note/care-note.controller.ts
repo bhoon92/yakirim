@@ -33,6 +33,16 @@ export class CareNoteController {
     return this.notes.listForMember(auth.churchId, memberId);
   }
 
+  @Get('mentions')
+  @Permissions('care:read')
+  @ApiOperation({
+    summary: '이 교인이 언급된 기록',
+    description: '다른 교인의 양육기록 본문에서 @ 로 이 교인을 언급한 것들 (노션의 백링크). 기록 대상 이름이 함께 온다.',
+  })
+  mentions(@RequireChurch() auth: AuthContext & { churchId: number }, @Param('memberId', ParseIntPipe) memberId: number) {
+    return this.notes.listMentioning(auth.churchId, memberId);
+  }
+
   @Post()
   @Permissions('care:write')
   @ApiOperation({

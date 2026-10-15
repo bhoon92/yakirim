@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 
-import { createCareNote, deleteCareNote, listCareNotes, type CreateCareNotePayload } from '@/api/care-notes';
+import { createCareNote, deleteCareNote, listCareNoteMentions, listCareNotes, type CreateCareNotePayload } from '@/api/care-notes';
 import { listReferences } from '@/api/references';
 import { Button } from '@/components/ui/button';
 import { PanelToggle } from '@/components/ui/panel-toggle';
@@ -12,6 +12,33 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/lib/permissions';
 import { todayString } from '@/lib/date';
+import { mentionsInText } from '@/lib/autocomplete/use-member-mention';
+import { MemberDetailModal } from './member-detail-modal';
+
+/**
+ * 본문의 "@이름" 을 눌러서 그 교인 카드를 여는 링크로 — 저장된 언급(mentions)에 있는 이름만.
+ * 긴 이름부터 맞춰야 "@김성" 이 "@김성도" 를 먼저 먹지 않는다.
+ */
+function withMentions(text: string, mentions: { id: number; name: string }[], onOpen: (id: number) => void): ReactNode {
+  if (mentions.length === 0) return text;
+  const byName = new Map(mentions.map(mention => [`@${mention.name}`, mention.id]));
+  const escaped = [...byName.keys()].sort((a, b) => b.length - a.length).map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return text.split(new RegExp(`(${escaped.join('|')})`)).map((part, index) => {
+    const id = byName.get(part);
+    return id ? (
+      <button
+        key={index}
+        type="button"
+        onClick={() => onOpen(id)}
+        className="font-semibold text-[var(--color-primary,#2563eb)] hover:underline"
+      >
+        {part}
+      </button>
+    ) : (
+      <Fragment key={index}>{part}</Fragment>
+    );
+  });
+}
 
 /** 기록 종류는 교회가 편집하는 기준정보다. 색은 종류 id 로 정해져 상세·목록 어디서든 같다. */
 function useCareNoteTypes() {
@@ -23,14 +50,20 @@ export function CareNoteSection({ memberId }: { memberId: number }) {
   const { can } = usePermissions();
   const canWrite = can('care:write');
   const [adding, setAdding] = useState(false);
+  const [openMemberId, setOpenMemberId] = useState<number | null>(null);
 
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ['care-notes', memberId],
     queryFn: () => listCareNotes(memberId),
   });
+  // 노션의 백링크 — 다른 사람의 기록에서 이 사람을 @ 로 언급한 것
+  const { data: mentionedIn = [] } = useQuery({
+    queryKey: ['care-notes', 'mentions', memberId],
+    queryFn: () => listCareNoteMentions(memberId),
+  });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['care-notes', memberId] });
+    queryClient.invalidateQueries({ queryKey: ['care-notes'] }); // 언급된 사람의 백링크도 함께
     // "내가 맡은 사람"·간사 상세의 순서가 마지막 기록일로 정해진다
     queryClient.invalidateQueries({ queryKey: ['flock'] });
   };
@@ -85,7 +118,7 @@ export function CareNoteSection({ memberId }: { memberId: number }) {
                 )}
               </div>
 
-              <p className="mt-2 whitespace-pre-wrap text-sm">{note.content}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm">{withMentions(note.content, note.mentions, setOpenMemberId)}</p>
 
               {note.prayerRequest && (
                 <p className="mt-2 whitespace-pre-wrap rounded-lg bg-[var(--color-muted)] px-2.5 py-1.5 text-xs">
@@ -105,6 +138,32 @@ export function CareNoteSection({ memberId }: { memberId: number }) {
           ))}
         </ul>
       )}
+
+      {mentionedIn.length > 0 && (
+        <details className="mt-4">
+          <summary className="cursor-pointer text-xs font-semibold text-[var(--color-muted-foreground)]">
+            다른 기록에서 언급됨 {mentionedIn.length}
+          </summary>
+          <ul className="mt-2 space-y-2">
+            {mentionedIn.map(note => (
+              <li key={note.id} className="rounded-lg bg-[var(--color-muted)] px-3 py-2 text-sm">
+                <div className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
+                  <button type="button" onClick={() => setOpenMemberId(note.subjectMemberId)} className="font-semibold hover:underline">
+                    {note.subjectName}
+                  </button>
+                  <span className="tabular-nums">{note.date}</span>
+                  <span>· {note.typeName ?? '기록'}</span>
+                </div>
+                <p className="mt-1 line-clamp-3 whitespace-pre-wrap">{withMentions(note.content, note.mentions, setOpenMemberId)}</p>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {openMemberId !== null && openMemberId !== memberId && (
+        <MemberDetailModal memberId={openMemberId} onClose={() => setOpenMemberId(null)} />
+      )}
     </div>
   );
 }
@@ -121,6 +180,8 @@ function NoteForm({ memberId, onDone, onCancel }: { memberId: number; onDone: ()
   const [content, setContent] = useState('');
   const [prayerRequest, setPrayerRequest] = useState('');
   const [statusNote, setStatusNote] = useState('');
+  // @ 로 고른 교인 — 저장할 때 본문에 아직 "@이름" 이 남은 사람만 보낸다
+  const [picked, setPicked] = useState<Map<number, string>>(() => new Map());
 
   const createMut = useMutation({
     mutationFn: (payload: CreateCareNotePayload) => createCareNote(memberId, payload),
@@ -136,6 +197,7 @@ function NoteForm({ memberId, onDone, onCancel }: { memberId: number; onDone: ()
       content: content.trim(),
       prayerRequest: prayerRequest.trim() || undefined,
       statusNote: statusNote.trim() || undefined,
+      mentionedMemberIds: mentionsInText(content, picked),
     });
   };
 
@@ -165,9 +227,10 @@ function NoteForm({ memberId, onDone, onCancel }: { memberId: number; onDone: ()
       </div>
 
       <Textarea
-        placeholder="본문"
+        placeholder="본문 — @이름 으로 다른 교인을 언급할 수 있습니다"
         value={content}
         onChange={event => setContent(event.target.value)}
+        onMention={member => setPicked(current => new Map(current).set(member.id, member.name))}
         rows={3}
         className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm outline-none focus:border-[var(--color-foreground)]"
       />

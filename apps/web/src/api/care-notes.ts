@@ -13,8 +13,13 @@ export type CareNote = {
   statusNote: string | null;
   recorderAccountId: number;
   recorderName: string | null;
+  /** 본문에서 @ 로 언급한 교인 */
+  mentions: { id: number; name: string }[];
   createdAt: string;
 };
+
+/** 다른 교인의 기록에서 이 교인이 언급된 것 (백링크) */
+export type CareNoteMention = CareNote & { subjectMemberId: number; subjectName: string };
 
 export type CreateCareNotePayload = {
   typeId?: number;
@@ -23,6 +28,7 @@ export type CreateCareNotePayload = {
   content: string;
   prayerRequest?: string;
   statusNote?: string;
+  mentionedMemberIds?: number[];
 };
 
 export async function listCareNotes(memberId: number): Promise<CareNote[]> {
@@ -51,4 +57,10 @@ export async function deleteCareNote(memberId: number, id: number): Promise<void
     credentials: 'include',
   });
   if (!res.ok) throw new Error(`delete care note ${res.status}`);
+}
+
+export async function listCareNoteMentions(memberId: number): Promise<CareNoteMention[]> {
+  const res = await fetch(`/api/members/${memberId}/care-notes/mentions`, { credentials: 'include' });
+  if (!res.ok) throw new Error(`list care note mentions ${res.status}`);
+  return res.json();
 }
