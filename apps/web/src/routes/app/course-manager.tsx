@@ -2,8 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { TRAINING_FORMAT_LABEL, byLadder, createCourse, listCourses } from '@/api/training';
+import { TRAINING_FORMAT_LABEL, byLadder, createCourse, listCourses, updateCourse } from '@/api/training';
 import { Button } from '@/components/ui/button';
+import { IconPicker } from '@/components/ui/icon-picker';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/lib/permissions';
@@ -53,6 +54,15 @@ function CourseList() {
   const { data: courses = [], isLoading } = useQuery({ queryKey: ['training', 'courses'], queryFn: listCourses });
   const sorted = [...courses].sort(byLadder);
 
+  const iconMut = useMutation({
+    mutationFn: ({ id, icon }: { id: number; icon: string | null }) => updateCourse(id, { icon }),
+    onSuccess: () => {
+      // 기수 목록·홈 카드도 과정 아이콘을 보여준다
+      queryClient.invalidateQueries({ queryKey: ['training'] });
+      queryClient.invalidateQueries({ queryKey: ['home'] });
+    },
+  });
+
   const createMut = useMutation({
     mutationFn: () => createCourse({ name: name.trim() }),
     onSuccess: course => {
@@ -78,21 +88,31 @@ function CourseList() {
             const open = openId === course.id;
             return (
               <li key={course.id} className={cn('rounded-xl border border-[var(--color-border)]', !course.isActive && 'opacity-60')}>
-                <button
-                  onClick={() => setOpenId(open ? null : course.id)}
-                  disabled={!canWrite}
-                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
-                >
-                  {canWrite && (open ? <ChevronDown className="size-4 shrink-0" /> : <ChevronRight className="size-4 shrink-0" />)}
-                  <span className="w-14 shrink-0 text-xs font-semibold tabular-nums">
-                    {course.step !== null ? `STEP ${course.step}` : <span className="text-[var(--color-muted-foreground)]">—</span>}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{course.name}</span>
-                  <span className="shrink-0 text-xs text-[var(--color-muted-foreground)]">
-                    {TRAINING_FORMAT_LABEL[course.format]} · {course.defaultSessionCount}회차 · 기수 {course.cohortCount}
-                    {!course.isActive && ' · 숨김'}
-                  </span>
-                </button>
+                <div className="flex items-center gap-1 pl-3">
+                  <IconPicker
+                    value={course.icon}
+                    seed={course.name}
+                    kind="training"
+                    size="xs"
+                    editable={canWrite}
+                    onChange={icon => iconMut.mutate({ id: course.id, icon })}
+                  />
+                  <button
+                    onClick={() => setOpenId(open ? null : course.id)}
+                    disabled={!canWrite}
+                    className="flex w-full items-center gap-2 py-2.5 pr-3 pl-1 text-left"
+                  >
+                    {canWrite && (open ? <ChevronDown className="size-4 shrink-0" /> : <ChevronRight className="size-4 shrink-0" />)}
+                    <span className="w-14 shrink-0 text-xs font-semibold tabular-nums">
+                      {course.step !== null ? `STEP ${course.step}` : <span className="text-[var(--color-muted-foreground)]">—</span>}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{course.name}</span>
+                    <span className="shrink-0 text-xs text-[var(--color-muted-foreground)]">
+                      {TRAINING_FORMAT_LABEL[course.format]} · {course.defaultSessionCount}회차 · 기수 {course.cohortCount}
+                      {!course.isActive && ' · 숨김'}
+                    </span>
+                  </button>
+                </div>
                 {open && (
                   <div className="border-t border-[var(--color-border)] p-2">
                     <CourseOptionEditor course={course} courses={courses} onDeleted={() => setOpenId(null)} />

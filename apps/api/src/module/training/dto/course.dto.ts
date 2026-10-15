@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Length, Max, MaxLength, Min } from 'class-validator';
 import { TrainingFormat } from '@src/database/entities/training-course.entity';
 
 export class CreateCourseDto {
@@ -51,6 +51,12 @@ export class CreateCourseDto {
   @IsOptional()
   @IsBoolean()
   completionSuggestsResident?: boolean;
+
+  /** 직접 고른 아이콘(이모지 한 개). null 을 보내면 이름으로 자동 배정으로 되돌린다. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(16)
+  icon?: string | null;
 }
 
 export class UpdateCourseDto extends PartialType(CreateCourseDto) {}

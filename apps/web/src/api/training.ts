@@ -42,6 +42,8 @@ export const ENROLLMENT_STATUS_LABEL: Record<EnrollmentStatus, string> = {
 export type TrainingCourse = {
   id: number;
   name: string;
+  /** 직접 고른 아이콘. null 이면 이름으로 자동 */
+  icon: string | null;
   format: TrainingFormat;
   defaultSessionCount: number;
   description: string | null;
@@ -65,12 +67,14 @@ export type CoursePatch = Partial<{
   step: number | null;
   completionStatusId: number | null;
   completionSuggestsResident: boolean;
+  icon: string | null;
 }>;
 
 export type Cohort = {
   id: number;
   courseId: number;
   courseName: string;
+  courseIcon: string | null;
   /** 담당자가 직접 적는 기수 이름 — "5기" 여도 되고 "2026 봄학기" 여도 된다. */
   name: string;
   /** 목록 표시용 = `{과정명} {기수이름}` */

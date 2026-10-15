@@ -2,11 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ImageOff, Trash2, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 
-import { createEvent, deleteEvent, deletePhoto, listEvents, listPhotos, uploadPhoto, type ChurchEvent } from '@/api/gallery';
+import { createEvent, deleteEvent, deletePhoto, listEvents, listPhotos, updateEvent, uploadPhoto, type ChurchEvent } from '@/api/gallery';
 import { Button } from '@/components/ui/button';
 import { PanelToggle } from '@/components/ui/panel-toggle';
 import { Card, CardContent } from '@/components/ui/card';
-import { EmojiTile } from '@/components/ui/emoji-tile';
+import { IconPicker } from '@/components/ui/icon-picker';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
 import { cn } from '@/lib/utils';
@@ -55,6 +55,11 @@ function EventList({ onOpen, canWrite }: { onOpen: (event: ChurchEvent) => void;
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
   });
 
+  const iconMut = useMutation({
+    mutationFn: ({ id, icon }: { id: number; icon: string | null }) => updateEvent(id, { icon }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
+  });
+
   return (
     <div className="space-y-4">
       {canWrite && (
@@ -94,7 +99,13 @@ function EventList({ onOpen, canWrite }: { onOpen: (event: ChurchEvent) => void;
               <CardContent className="p-5" onClick={() => onOpen(event)}>
                 <div className="flex items-start justify-between">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <EmojiTile seed={event.name} kind="event" size="sm" />
+                    <IconPicker
+                      value={event.icon}
+                      seed={event.name}
+                      kind="event"
+                      editable={canWrite}
+                      onChange={icon => iconMut.mutate({ id: event.id, icon })}
+                    />
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold">{event.name}</div>
                       {event.date && <div className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">{event.date}</div>}

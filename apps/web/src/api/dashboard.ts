@@ -10,6 +10,7 @@ export type HomeScheduleItem = {
   startAt: string;
   allDay: boolean;
   layer: string;
+  layerIcon: string | null;
   color: string;
 };
 
@@ -30,6 +31,7 @@ export type PipelineStage = {
 export type OngoingCohort = {
   cohortId: number;
   label: string;
+  icon: string | null;
   startDate: string;
   enrolledCount: number;
   sessionCount: number;

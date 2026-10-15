@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils';
 import { emojiFor, tileTone, type EmojiKind } from '@/lib/tile';
 
 const SIZE = {
+  xs: 'size-6 text-sm',
   sm: 'size-8 text-base',
   md: 'size-10 text-lg',
   lg: 'size-12 text-xl',
