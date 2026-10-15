@@ -25,7 +25,8 @@
 
 ### 현재 상태 한 줄
 
-Render(develop 자동 배포) + Neon 으로 운영 중. 작업은 브랜치 → PR → develop 머지(= 배포) 순서, 머지된 브랜치는 GitHub 이 자동 삭제.
+Render(**main** 자동 배포) + Neon 으로 운영 중. 작업은 브랜치 → PR → develop 머지, 운영 배포는 develop → main 릴리스 PR(일반 머지, squash 금지).
+develop·main 둘 다 보호 브랜치(PR 필수 · CI `check` 필수 · 관리자 포함). 머지된 작업 브랜치는 GitHub 이 자동 삭제.
 이슈는 개인 노션 Yakirim > Kanban Board ✅ Tasks 에서 관리한다.
 
 - 서버: API 3030 / 웹 5173 (둘 다 사용자 터미널에서 `pnpm dev:api` / `pnpm dev:web`)
@@ -129,7 +130,7 @@ NestJS 가 `apps/web/dist` 를 직접 서빙, `.nvmrc` v22.17.1, pnpm allowBuild
 watch branch 전환(지금 `main` 은 `Initial commit` 하나뿐이라 먼저 머지해야 한다) → ⑧ CI → ⑨ 브랜치 보호·Usage Limit.
 
 ### 2.3 CI — `.github/workflows/ci.yaml` (2026-10-14)
-PR(develop·main 대상)과 develop 푸시마다: lint·prettier → 웹 빌드(`tsc -b`) → API 빌드 →
+PR(develop·main 대상)과 develop·main 푸시마다: lint·prettier → 웹 빌드(`tsc -b`) → API 빌드 →
 **빈 Postgres 16 에서 `NODE_ENV=production` 으로 부팅해 마이그레이션 전체 실행 + `/api/health`** →
 **스키마 드리프트 검사**(`migration:generate --check` — 엔티티를 바꾸고 마이그레이션을 빠뜨리면 실패, 로그에 필요한 SQL 이 나온다).
 드리프트 검사를 처음 돌렸을 때 `care_note_type` 인덱스 이름이 어긋나 있었다 → `1788240000000` 에서 이름만 맞췄다.

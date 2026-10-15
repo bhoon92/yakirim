@@ -10,7 +10,8 @@ services:
     runtime: node
     plan: free
     region: singapore
-    branch: develop
+    # 운영 배포는 main 만 — develop 은 작업을 모으는 곳이고, develop → main 릴리스 PR 을 머지하면 배포된다
+    branch: main
     buildCommand: npm install -g pnpm@11.23.0 && pnpm install --frozen-lockfile && pnpm build:web && pnpm build:api
     # apps/api 에서 실행해야 node-config 가 config/ 를 찾는다
     startCommand: cd apps/api && node dist/src/main
