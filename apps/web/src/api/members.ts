@@ -235,3 +235,38 @@ export async function fetchPipeline(): Promise<PipelineColumn[]> {
   if (!res.ok) throw new Error(`pipeline ${res.status}`);
   return res.json();
 }
+
+// ── 저장된 보기 ──────────────────────────
+export type MemberViewFilters = {
+  q?: string;
+  statusId?: number;
+  affiliationKind?: AffiliationKind;
+  affiliationId?: number;
+  stalled?: boolean;
+  shepherd?: number | 'none';
+};
+
+export type MemberView = { id: number; name: string; filters: MemberViewFilters; sortOrder: number };
+
+export async function listMemberViews(): Promise<MemberView[]> {
+  const res = await fetch('/api/member-views', { credentials: 'include' });
+  if (!res.ok) throw new Error(`member views ${res.status}`);
+  return res.json();
+}
+
+export async function createMemberView(payload: { name: string; filters: MemberViewFilters }): Promise<MemberView> {
+  const res = await fetch('/api/member-views', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  if (res.status === 409) throw new Error('같은 이름의 보기가 이미 있습니다.');
+  if (!res.ok) throw new Error(`create member view ${res.status}`);
+  return res.json();
+}
+
+export async function deleteMemberView(id: number): Promise<void> {
+  const res = await fetch(`/api/member-views/${id}`, { method: 'DELETE', credentials: 'include' });
+  if (!res.ok) throw new Error(`delete member view ${res.status}`);
+}
