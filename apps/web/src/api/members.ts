@@ -209,3 +209,29 @@ export async function fetchStalledMembers(limit?: number): Promise<StalledMember
   if (!res.ok) throw new Error(`fetch stalled members ${res.status}`);
   return res.json();
 }
+
+// ── 파이프라인 보드 ──────────────────────
+export type PipelineCard = {
+  id: number;
+  name: string;
+  since: string | null;
+  days: number | null;
+  stalled: boolean;
+  shepherdName: string | null;
+};
+
+export type PipelineColumn = {
+  statusId: number;
+  name: string;
+  stallsAfterDays: number | null;
+  count: number;
+  stalledCount: number;
+  /** 오래 머문 순으로 최대 50장 — 나머지는 count 로만 */
+  members: PipelineCard[];
+};
+
+export async function fetchPipeline(): Promise<PipelineColumn[]> {
+  const res = await fetch('/api/members/pipeline', { credentials: 'include' });
+  if (!res.ok) throw new Error(`pipeline ${res.status}`);
+  return res.json();
+}

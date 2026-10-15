@@ -14,6 +14,7 @@ import {
   Network,
   Search,
   Settings,
+  SquareKanban,
   Users,
   Wallet,
 } from 'lucide-react';
@@ -53,6 +54,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/app/residents', label: '간사', icon: Home },
       { to: '/app/members', label: '교인', icon: Users },
+      { to: '/app/pipeline', label: '파이프라인', icon: SquareKanban },
       { to: '/app/training', label: '훈련', icon: GraduationCap },
       { to: '/app/missionaries', label: '선교사', icon: Globe2 },
     ],

@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Download, Phone, Plus, Search, Settings2, Upload, UserPlus, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Phone, Plus, Search, Settings2, SquareKanban, Upload, UserPlus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 
 import { createMember, listMembers, type AffiliationKind, type Member, type MemberAffiliationTag, type MemberCounts } from '@/api/members';
 import { listResidents } from '@/api/residents';
@@ -35,7 +35,11 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 
 export function MembersPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusId, setStatusId] = useState<number | null>(null);
+  // 보드의 "목록에서 보기"가 ?statusId= 로 들어온다
+  const [statusId, setStatusId] = useState<number | null>(() => {
+    const fromUrl = Number(new URLSearchParams(window.location.search).get('statusId'));
+    return Number.isInteger(fromUrl) && fromUrl > 0 ? fromUrl : null;
+  });
   const [affiliation, setAffiliation] = useState<AffiliationSelection | null>(null);
   // 담당 간사 필터: null = 전체, 'none' = 담당 없음, 숫자 = 그 간사가 맡은 사람
   const [shepherd, setShepherd] = useState<number | 'none' | null>(null);
@@ -108,6 +112,12 @@ export function MembersPage() {
                 <span className="hidden sm:inline">재적상태·역할</span>
               </Button>
             )}
+            <Button asChild variant="outline" aria-label="보드로 보기" title="단계별 보드로 보기">
+              <Link to="/app/pipeline">
+                <SquareKanban />
+                <span className="hidden sm:inline">보드</span>
+              </Link>
+            </Button>
             <Button variant="outline" onClick={() => void exportMembers()} aria-label="내보내기" title="내보내기">
               <Download />
               <span className="hidden sm:inline">내보내기</span>
