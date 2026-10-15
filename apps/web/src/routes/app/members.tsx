@@ -3,7 +3,15 @@ import { ChevronLeft, ChevronRight, Download, Phone, Plus, Search, Settings2, Sq
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
-import { createMember, listMembers, type AffiliationKind, type Member, type MemberAffiliationTag, type MemberCounts } from '@/api/members';
+import {
+  createMember,
+  listMembers,
+  type AffiliationKind,
+  type Member,
+  type MemberAffiliationTag,
+  type MemberCounts,
+  type MemberViewFilters,
+} from '@/api/members';
 import { listResidents } from '@/api/residents';
 import { listReferences, type Reference } from '@/api/references';
 import { exportMembers } from '@/api/exports';
@@ -11,6 +19,7 @@ import { usePermissions } from '@/lib/permissions';
 import { ReferenceManagerModal } from '@/components/reference-manager';
 import { MemberDetailModal } from '@/routes/app/member-detail-modal';
 import { MemberImportModal } from '@/routes/app/member-import-modal';
+import { MemberViewsBar } from '@/routes/app/member-views-bar';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { TagChip } from '@/components/ui/tag-chip';
@@ -75,6 +84,26 @@ export function MembersPage() {
     setShepherd(value);
     setPage(1);
   };
+  // 저장된 보기 — 필터를 한 번에 바꾼다
+  const applyView = (filters: MemberViewFilters) => {
+    setSearchQuery(filters.q ?? '');
+    setStatusId(filters.statusId ?? null);
+    setAffiliation(filters.affiliationKind && filters.affiliationId ? { kind: filters.affiliationKind, id: filters.affiliationId } : null);
+    setShepherd(filters.shepherd ?? null);
+    if (filters.stalled) searchParams.set('stalled', 'true');
+    else searchParams.delete('stalled');
+    setSearchParams(searchParams, { replace: true });
+    setPage(1);
+  };
+  const currentFilters: MemberViewFilters = {
+    q: searchQuery.trim() || undefined,
+    statusId: statusId ?? undefined,
+    affiliationKind: affiliation?.kind,
+    affiliationId: affiliation?.id,
+    stalled: stalledOnly || undefined,
+    shepherd: shepherd ?? undefined,
+  };
+
   const clearStalled = () => {
     searchParams.delete('stalled');
     setSearchParams(searchParams, { replace: true });
@@ -147,6 +176,8 @@ export function MembersPage() {
       )}
 
       {importing && <MemberImportModal onClose={() => setImporting(false)} />}
+
+      <MemberViewsBar current={currentFilters} onApply={applyView} canWrite={can('member:write')} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
