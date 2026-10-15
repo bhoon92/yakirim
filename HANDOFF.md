@@ -25,7 +25,8 @@
 
 ### 현재 상태 한 줄
 
-로컬 개발 완료 상태. **배포는 아직 안 했다.** 커밋 15건이 `develop` 에 있고 전부 푸시됨, 워킹 트리 깨끗.
+Render(develop 자동 배포) + Neon 으로 운영 중. 작업은 브랜치 → PR → develop 머지(= 배포) 순서, 머지된 브랜치는 GitHub 이 자동 삭제.
+이슈는 개인 노션 Yakirim > Kanban Board ✅ Tasks 에서 관리한다.
 
 - 서버: API 3030 / 웹 5173 (둘 다 사용자 터미널에서 `pnpm dev:api` / `pnpm dev:web`)
 - DB: 교회 1 · **교인 309** · 상태이력 309 · 훈련 기수 5 · 선교사 3 · 기록 종류 6
@@ -127,11 +128,11 @@ NestJS 가 `apps/web/dist` 를 직접 서빙, `.nvmrc` v22.17.1, pnpm allowBuild
 ④ 시크릿 생성 → ⑤ 변수 입력 → ⑥ **로그에서 마이그레이션·헬스체크 확인** → ⑦ `develop → main` 머지 후
 watch branch 전환(지금 `main` 은 `Initial commit` 하나뿐이라 먼저 머지해야 한다) → ⑧ CI → ⑨ 브랜치 보호·Usage Limit.
 
-### 2.3 CI — 빈 껍데기만 있음
-`.github/workflows/` 에 `build.yaml` · `deploy.yaml` · `test.yaml` 이 있는데 **전부 0바이트**다.
-채운다면 넣어야 할 것: `tsc -b`, `eslint src`, 빌드, 그리고 **빈 Postgres 에 마이그레이션 체인 전체 재실행**.
-마지막 것이 핵심이다 — `migrationsRun: true` 라 마이그레이션 실패 = 앱이 안 뜸 = 배포 실패인데,
-타입체크로는 절대 못 잡는다.
+### 2.3 CI — `.github/workflows/ci.yaml` (2026-10-14)
+PR(develop·main 대상)과 develop 푸시마다: lint·prettier → 웹 빌드(`tsc -b`) → API 빌드 →
+**빈 Postgres 16 에서 `NODE_ENV=production` 으로 부팅해 마이그레이션 전체 실행 + `/api/health`** →
+**스키마 드리프트 검사**(`migration:generate --check` — 엔티티를 바꾸고 마이그레이션을 빠뜨리면 실패, 로그에 필요한 SQL 이 나온다).
+드리프트 검사를 처음 돌렸을 때 `care_note_type` 인덱스 이름이 어긋나 있었다 → `1788240000000` 에서 이름만 맞췄다.
 
 ### 2.4 내가 남긴 미완성
 | 항목 | 상태 |

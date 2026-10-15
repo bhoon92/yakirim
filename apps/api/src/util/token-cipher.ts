@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import config from 'config';
 import { ValueTransformer } from 'typeorm';
-import { ConfigProvider } from '@src/config';
 
 /**
  * 외부 서비스 토큰(구글 캘린더 refresh/access token)을 DB 에 넣을 때 쓰는 AES-256-GCM 암호화.
@@ -12,7 +12,8 @@ import { ConfigProvider } from '@src/config';
 const PREFIX = 'enc:v1:';
 
 function key(): Buffer {
-  const secret = ConfigProvider.tokenEncryption.key;
+  // ConfigProvider 를 import 하면 엔티티를 불러오는 순간 설정 전체를 읽는다 — 마이그레이션 CLI 가 환경변수 없이도 엔티티를 읽을 수 있게 필요할 때만 읽는다
+  const secret = config.has('tokenEncryption.key') ? config.get<string>('tokenEncryption.key') : '';
   if (!secret) throw new Error('TOKEN_ENCRYPTION_KEY 가 설정되지 않아 토큰을 암호화/복호화할 수 없습니다');
   // 어떤 길이의 문자열이 와도 32바이트 키가 되도록
   return createHash('sha256').update(secret).digest();
