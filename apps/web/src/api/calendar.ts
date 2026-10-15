@@ -1,6 +1,7 @@
 export type Calendar = {
   id: number;
   name: string;
+  icon: string | null;
   color: string;
   description: string | null;
   sortOrder: number;
@@ -58,6 +59,7 @@ async function send<T>(method: string, url: string, body?: unknown): Promise<T> 
 // ── 달력(레이어) ─────────────────────────
 export const listCalendars = () => getJson<Calendar[]>('/api/calendar/calendars');
 export const createCalendar = (body: { name: string; color?: string }) => send<Calendar>('POST', '/api/calendar/calendars', body);
+export const updateCalendar = (id: number, body: { icon: string | null }) => send<Calendar>('PATCH', `/api/calendar/calendars/${id}`, body);
 export const deleteCalendar = (id: number) => send<void>('DELETE', `/api/calendar/calendars/${id}`);
 
 // ── 일정 ─────────────────────────────────

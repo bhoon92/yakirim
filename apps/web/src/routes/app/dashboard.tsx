@@ -136,7 +136,7 @@ export function DashboardPage() {
               <ul className="divide-y divide-[var(--color-border)]">
                 {schedule.map(item => (
                   <li key={`${item.id}-${item.startAt}`} className="flex items-center gap-3 py-2.5">
-                    <EmojiTile seed={item.layer} kind="calendar" size="sm" />
+                    <EmojiTile seed={item.layer} kind="calendar" emoji={item.layerIcon ?? undefined} size="sm" />
                     <div className="w-12 shrink-0 text-xs font-medium tabular-nums text-[var(--color-muted-foreground)]">
                       {formatTime(item)}
                     </div>
@@ -217,7 +217,7 @@ export function DashboardPage() {
                 <ul className="space-y-2.5">
                   {training.map(cohort => (
                     <li key={cohort.cohortId} className="flex items-center gap-2.5">
-                      <EmojiTile seed={cohort.label} kind="training" size="sm" />
+                      <EmojiTile seed={cohort.label} kind="training" emoji={cohort.icon ?? undefined} size="sm" />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium">{cohort.label}</div>
                         <div className="text-[11px] tabular-nums text-[var(--color-muted-foreground)]">

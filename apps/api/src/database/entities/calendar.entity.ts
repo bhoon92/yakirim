@@ -25,4 +25,7 @@ export class CalendarEntity extends BaseDateEntityWithDeletedAt {
 
   @Column({ default: true })
   isActive!: boolean;
+
+  @Column({ type: 'varchar', length: 16, nullable: true, comment: '직접 고른 아이콘(이모지). null 이면 이름으로 자동 배정' })
+  icon?: string | null;
 }

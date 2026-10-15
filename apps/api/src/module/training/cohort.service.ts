@@ -15,6 +15,8 @@ export type CohortSummary = {
   id: number;
   courseId: number;
   courseName: string;
+  /** 과정에 직접 고른 아이콘. null 이면 화면이 이름으로 자동 배정 */
+  courseIcon: string | null;
   name: string;
   label: string;
   startDate: string;
@@ -51,7 +53,7 @@ export class TrainingCohortService {
     if (cohorts.length === 0) return [];
 
     const [courseMap, leaderMap, sessionCounts, enrollmentRows] = await Promise.all([
-      this.courseNameMap(churchId),
+      this.courseMap(churchId),
       this.leaderNameMap(churchId, cohorts),
       this.sessionCountMap(cohorts.map(cohort => cohort.id)),
       this.enrollmentRepo().find({ where: { churchId, cohortId: In(cohorts.map(cohort => cohort.id)) } }),
@@ -59,11 +61,13 @@ export class TrainingCohortService {
 
     return cohorts.map(cohort => {
       const enrollments = enrollmentRows.filter(row => row.cohortId === cohort.id);
-      const courseName = courseMap.get(cohort.courseId) ?? '(삭제된 과정)';
+      const course = courseMap.get(cohort.courseId);
+      const courseName = course?.name ?? '(삭제된 과정)';
       return {
         id: cohort.id,
         courseId: cohort.courseId,
         courseName,
+        courseIcon: course?.icon ?? null,
         name: cohort.name,
         label: `${courseName} ${cohort.name}`,
         startDate: cohort.startDate,
@@ -239,9 +243,9 @@ export class TrainingCohortService {
     }
   }
 
-  private async courseNameMap(churchId: number): Promise<Map<number, string>> {
+  private async courseMap(churchId: number): Promise<Map<number, TrainingCourseEntity>> {
     const courses = await DataSources.instance.getRepository(TrainingCourseEntity).find({ where: { churchId } });
-    return new Map(courses.map(course => [course.id, course.name]));
+    return new Map(courses.map(course => [course.id, course]));
   }
 
   private async leaderNameMap(churchId: number, cohorts: TrainingCohortEntity[]): Promise<Map<number, string>> {

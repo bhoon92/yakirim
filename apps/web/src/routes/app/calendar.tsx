@@ -12,12 +12,14 @@ import {
   listEvents,
   RECURRENCE_LABEL,
   regenerateSubscription,
+  updateCalendar,
   updateEvent,
   updateSubscription,
   type Calendar,
   type CalendarEvent,
   type Recurrence,
 } from '@/api/calendar';
+import { IconPicker } from '@/components/ui/icon-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -278,6 +280,14 @@ function CalendarSidebar({
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
 
+  const iconMut = useMutation({
+    mutationFn: ({ id, icon }: { id: number; icon: string | null }) => updateCalendar(id, { icon }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendars'] });
+      queryClient.invalidateQueries({ queryKey: ['home'] }); // 홈 "오늘 일정" 타일
+    },
+  });
+
   const createMut = useMutation({
     mutationFn: () => createCalendar({ name: name.trim() }),
     onSuccess: () => {
@@ -328,10 +338,10 @@ function CalendarSidebar({
           {calendars.map(calendar => {
             const on = !hidden.has(calendar.id);
             return (
-              <li key={calendar.id}>
+              <li key={calendar.id} className="flex items-center gap-1">
                 <button
                   onClick={() => onToggle(calendar.id)}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-[var(--color-muted)]"
+                  className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-[var(--color-muted)]"
                 >
                   <span
                     className={cn(
@@ -346,6 +356,14 @@ function CalendarSidebar({
                     {calendar.name}
                   </span>
                 </button>
+                <IconPicker
+                  value={calendar.icon}
+                  seed={calendar.name}
+                  kind="calendar"
+                  size="xs"
+                  editable={canWrite}
+                  onChange={icon => iconMut.mutate({ id: calendar.id, icon })}
+                />
               </li>
             );
           })}
