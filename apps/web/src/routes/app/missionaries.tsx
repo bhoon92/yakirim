@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { PanelToggle } from '@/components/ui/panel-toggle';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { todayString } from '@/lib/date';
 import { usePermissions } from '@/lib/permissions';
 import { exportMissionaries } from '@/api/exports';
@@ -472,7 +473,7 @@ function NoteForm({ missionaryId, stages, onDone }: { missionaryId: number; stag
 
   return (
     <div className="mb-3 space-y-2 rounded-xl border border-dashed border-[var(--color-border)] p-3">
-      <textarea
+      <Textarea
         placeholder="경과 메모 (예: 비자 발급 완료, 파송예배 일정 확정)"
         value={content}
         onChange={event => setContent(event.target.value)}

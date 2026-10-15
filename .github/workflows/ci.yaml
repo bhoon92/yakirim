@@ -72,6 +72,9 @@ jobs:
       - name: 웹 빌드 (tsc -b 포함)
         run: pnpm build:web
 
+      - name: 웹 테스트
+        run: pnpm --filter @yakirim/web test
+
       - name: API 빌드
         run: pnpm build:api
 

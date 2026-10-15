@@ -228,6 +228,7 @@ pg 드라이버가 `date` 컬럼을 **JS `Date` 로 주는 경우**(원시 쿼�
   부분 유니크 인덱스 때문에 **닫고 나서 열어야** 한다
 - **정체 판정은 `STALLED_CONDITION` 한 문장**(member-status-history.service) — `listStalled()` 와 `MemberService.list()` 의 `stalled` 필터가 같이 쓴다.
   "오늘"은 DB `CURRENT_DATE` 가 아니라 `stalledParams()` 로 앱이 넘긴다(운영 DB 는 UTC). 두 결과가 같은지는 테스트가 대조한다
+- **글자 입력칸은 `Input` / `Textarea`(components/ui) 를 쓴다** — 노션처럼 `:이름` 이모지 입력(lib/emoji)이 붙어 있다. 맨 `<input>`/`<textarea>` 에는 안 붙는다
 - **Enter 로 저장하는 입력칸은 `isSubmitEnter(event)`** — 맨 `event.key === 'Enter'` 는 웹 lint 가 막는다(한글 조합 중 Enter 두 번 → 요청 두 번)
 - **훈련 출석 ≠ 예배 출석**: `training_attendance` vs `attendance`. 합치지 말 것
 - **수료는 자동 판정하지 않는다** — 출석률은 참고용
