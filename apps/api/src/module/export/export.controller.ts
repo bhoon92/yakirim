@@ -73,6 +73,28 @@ export class ExportController {
     this.send(res, await this.exports.members_xlsx(auth.churchId), 'members.xlsx');
   }
 
+  @Get('residents')
+  @Permissions('resident:read')
+  @ApiOperation({
+    summary: '간사 명부 엑셀',
+    description: '간사 전체(퇴소 포함)를 내려준다. "현재 간사" 열이 상태의 countsAsActive 다. 하우스·사역팀·역할은 교인 소속에서 읽는다.',
+  })
+  @ApiOkResponse(XLSX_RESPONSE)
+  async residents(@RequireChurch() auth: AuthContext & { churchId: number }, @Res() res: Response) {
+    this.send(res, await this.exports.residents_xlsx(auth.churchId), 'residents.xlsx');
+  }
+
+  @Get('missionaries')
+  @Permissions('missionary:read')
+  @ApiOperation({
+    summary: '선교사 명부 엑셀',
+    description: '파송 트랙 전체를 내려준다. "현재 파송" 열이 단계의 countsAsActive 로, 대시보드 "현재 파송"과 같은 기준이다.',
+  })
+  @ApiOkResponse(XLSX_RESPONSE)
+  async missionaries(@RequireChurch() auth: AuthContext & { churchId: number }, @Res() res: Response) {
+    this.send(res, await this.exports.missionaries_xlsx(auth.churchId), 'missionaries.xlsx');
+  }
+
   private send(res: Response, buffer: Buffer, filename: string) {
     res.setHeader('Content-Type', XLSX_MIME);
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);

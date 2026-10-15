@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Home, Search, Settings2, SquareArrowOutUpRight, Trash2, X } from 'lucide-react';
+import { Download, Home, Search, Settings2, SquareArrowOutUpRight, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { listMembers, type Member } from '@/api/members';
@@ -28,6 +28,7 @@ import { todayString } from '@/lib/date';
 import { isSubmitEnter } from '@/lib/keyboard';
 import { useOrgLabels } from '@/lib/org-labels';
 import { usePermissions } from '@/lib/permissions';
+import { exportResidents } from '@/api/exports';
 import { cn } from '@/lib/utils';
 import { CareNoteSection } from './care-note-section';
 import { MemberDetailModal } from './member-detail-modal';
@@ -83,15 +84,21 @@ export function ResidentsPage() {
         title="간사"
         description="공동생활을 하며 섬기는 간사(선교사)를 관리합니다. 하우스·사역팀·역할은 교인 카드의 소속을 그대로 보여줍니다."
         actions={
-          canWrite && (
-            <>
-              <Button size="sm" variant="outline" onClick={() => setManagingStatuses(true)}>
-                <Settings2 className="size-4" />
-                상태 관리
-              </Button>
-              <PanelToggle open={registering} onToggle={() => setRegistering(!registering)} label="간사 등록" variant="default" />
-            </>
-          )
+          <>
+            <Button size="sm" variant="outline" onClick={() => void exportResidents()} aria-label="내보내기" title="엑셀로 내보내기">
+              <Download className="size-4" />
+              <span className="hidden sm:inline">내보내기</span>
+            </Button>
+            {canWrite && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => setManagingStatuses(true)}>
+                  <Settings2 className="size-4" />
+                  상태 관리
+                </Button>
+                <PanelToggle open={registering} onToggle={() => setRegistering(!registering)} label="간사 등록" variant="default" />
+              </>
+            )}
+          </>
         }
       />
 

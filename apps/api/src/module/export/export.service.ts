@@ -2,12 +2,29 @@ import { Injectable } from '@nestjs/common';
 import { Workbook, Worksheet } from 'exceljs';
 import { DataSources } from '@src/database/data-sources';
 import { MemberStatusEntity } from '@src/database/entities/member-status.entity';
+import { TrainingCourseEntity } from '@src/database/entities/training-course.entity';
+import { EnrollmentStatus } from '@src/database/entities/training-enrollment.entity';
 import { BudgetService } from '@src/module/finance/budget.service';
 import { OfferingService } from '@src/module/finance/offering.service';
 import { TransactionService } from '@src/module/finance/transaction.service';
 import { MemberService } from '@src/module/member/member.service';
+import { MissionaryService } from '@src/module/missionary/missionary.service';
+import { ResidentService } from '@src/module/resident/resident.service';
 
 const KIND_LABEL: Record<string, string> = { department: '부서', ministry: '사역팀', small_group: '목장' };
+
+/** 웹 ENROLLMENT_STATUS_LABEL 과 같은 말. */
+const ENROLLMENT_LABEL: Record<EnrollmentStatus, string> = {
+  [EnrollmentStatus.ENROLLED]: '수강 중',
+  [EnrollmentStatus.COMPLETED]: '수료',
+  [EnrollmentStatus.DROPPED]: '중도포기',
+};
+
+const names = (tags: { name: string | null }[]) =>
+  tags
+    .map(tag => tag.name ?? '')
+    .filter(Boolean)
+    .join(', ');
 
 @Injectable()
 export class ExportService {
@@ -15,7 +32,9 @@ export class ExportService {
     private readonly offerings: OfferingService,
     private readonly transactions: TransactionService,
     private readonly budgets: BudgetService,
-    private readonly members: MemberService
+    private readonly members: MemberService,
+    private readonly residents: ResidentService,
+    private readonly missionaries: MissionaryService
   ) {}
 
   /** 헌금 내역 (연도 기준). */
@@ -128,6 +147,90 @@ export class ExportService {
         baptizedAt: member.baptizedAt ?? '',
         occupation: member.occupation ?? '',
         address: member.address ?? '',
+      });
+    }
+    return this.toBuffer(wb);
+  }
+
+  /** 간사 명부 — 화면(간사 목록)과 같은 데이터. 지금 공동체에 없는 사람(퇴소 등)도 함께 내보내고 "현재 간사" 열로 구분한다. */
+  async residents_xlsx(churchId: number): Promise<Buffer> {
+    const [rows, courses] = await Promise.all([
+      this.residents.list(churchId, {}),
+      DataSources.instance.getRepository(TrainingCourseEntity).find({ where: { churchId }, withDeleted: true }),
+    ]);
+    const courseName = new Map(courses.map(course => [course.id, course.name]));
+    const wb = new Workbook();
+    const ws = wb.addWorksheet('간사 명부');
+    this.setColumns(ws, [
+      { header: '이름', key: 'name', width: 12 },
+      { header: '연락처', key: 'phone', width: 16 },
+      { header: '상태', key: 'status', width: 10 },
+      { header: '현재 간사', key: 'active', width: 10 },
+      { header: '입주일', key: 'joinedAt', width: 12 },
+      { header: '헌신일', key: 'committedAt', width: 12 },
+      { header: '퇴소일', key: 'leftAt', width: 12 },
+      { header: '하우스', key: 'smallGroups', width: 16 },
+      { header: '사역팀', key: 'ministries', width: 20 },
+      { header: '역할', key: 'position', width: 10 },
+      { header: '맡은 사역', key: 'duties', width: 20 },
+      { header: '훈련', key: 'training', width: 30 },
+      { header: '맡은 성도', key: 'flockCount', width: 10 },
+      { header: '메모', key: 'note', width: 30 },
+    ]);
+    for (const resident of rows) {
+      ws.addRow({
+        name: resident.memberName,
+        phone: resident.phone ?? '',
+        status: resident.statusName ?? '',
+        active: resident.statusCountsAsActive ? '예' : '아니오',
+        joinedAt: resident.joinedAt ?? '',
+        committedAt: resident.committedAt ?? '',
+        leftAt: resident.leftAt ?? '',
+        smallGroups: names(resident.smallGroups),
+        ministries: names(resident.ministries),
+        position: resident.position?.name ?? '',
+        duties: names(resident.duties),
+        training: resident.training
+          .map(step => `${courseName.get(step.courseId) ?? '(삭제된 과정)'} ${ENROLLMENT_LABEL[step.status] ?? step.status}`)
+          .join(', '),
+        flockCount: resident.flockCount,
+        note: resident.note ?? '',
+      });
+    }
+    return this.toBuffer(wb);
+  }
+
+  /** 선교사 명부 — 단계가 집계(countsAsActive) 단계인지를 "현재 파송" 열로 함께 준다 (대시보드 "현재 파송"과 같은 기준). */
+  async missionaries_xlsx(churchId: number): Promise<Buffer> {
+    const rows = await this.missionaries.list(churchId, {});
+    const wb = new Workbook();
+    const ws = wb.addWorksheet('선교사 명부');
+    this.setColumns(ws, [
+      { header: '이름', key: 'name', width: 12 },
+      { header: '단계', key: 'stage', width: 12 },
+      { header: '현재 파송', key: 'active', width: 10 },
+      { header: '파송 국가', key: 'country', width: 12 },
+      { header: '지역', key: 'region', width: 14 },
+      { header: '사역 내용', key: 'fieldWork', width: 24 },
+      { header: '파송 사역팀', key: 'ministry', width: 14 },
+      { header: '파송일', key: 'commissionedAt', width: 12 },
+      { header: '출국일', key: 'departedAt', width: 12 },
+      { header: '종료일', key: 'endedAt', width: 12 },
+      { header: '메모', key: 'note', width: 30 },
+    ]);
+    for (const missionary of rows) {
+      ws.addRow({
+        name: missionary.memberName,
+        stage: missionary.stageName ?? '단계 미지정',
+        active: missionary.stageCountsAsActive ? '예' : '아니오',
+        country: missionary.country ?? '',
+        region: missionary.region ?? '',
+        fieldWork: missionary.fieldWork ?? '',
+        ministry: missionary.ministryName ?? '',
+        commissionedAt: missionary.commissionedAt ?? '',
+        departedAt: missionary.departedAt ?? '',
+        endedAt: missionary.endedAt ?? '',
+        note: missionary.note ?? '',
       });
     }
     return this.toBuffer(wb);

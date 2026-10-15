@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Post, Query, Res, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Logger, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
@@ -23,6 +23,8 @@ type StatePayload = { accountId: number; churchId: number; purpose: 'gcal' };
 @ApiTags(SwaggerTag.GOOGLE_CALENDAR)
 @Controller('google-calendar')
 export class GoogleCalendarController {
+  private readonly logger = new Logger(GoogleCalendarController.name);
+
   constructor(
     private readonly oauth: GoogleOauthService,
     private readonly client: GoogleCalendarClient,
@@ -94,19 +96,28 @@ export class GoogleCalendarController {
       payload = this.jwt.verify<StatePayload>(state);
       if (payload.purpose !== 'gcal') throw new Error('bad purpose');
     } catch {
+      this.logger.warn('구글 캘린더 콜백: state 검증 실패(만료 10분 또는 위조)');
       return back('error');
     }
-    if (!code) return back('error');
+    if (!code) {
+      this.logger.warn('구글 캘린더 콜백: code 없음 — 사용자가 동의를 취소했을 수 있다');
+      return back('error');
+    }
 
     try {
       const token = await this.oauth.exchangeCode(code);
-      if (!token.refreshToken) return back('error'); // refresh token 없으면 push 불가
+      if (!token.refreshToken) {
+        this.logger.warn(`구글 캘린더 콜백: refresh token 없음 account=${payload.accountId} — push 불가`);
+        return back('error');
+      }
       const email = await this.oauth.userEmail(token.accessToken);
       const church = await DataSources.instance.getRepository(ChurchEntity).findOne({ where: { id: payload.churchId } });
       const calendarId = await this.client.createCalendar(token.accessToken, `${church?.name ?? '교회'} 일정`);
       await this.connections.upsert(payload.accountId, payload.churchId, email, calendarId, token);
       return back('connected');
-    } catch {
+    } catch (error) {
+      // 운영에서 연동이 실패하면 원인을 볼 곳이 이 로그뿐이다 (redirect URI 미등록 · Calendar API 미사용 · scope 미승인 등)
+      this.logger.error(`구글 캘린더 연동 실패 account=${payload.accountId}: ${String(error)}`);
       return back('error');
     }
   }

@@ -4,10 +4,8 @@ import { CalendarEventEntity } from '@src/database/entities/calendar-event.entit
 import { GoogleCalendarConnectionEntity } from '@src/database/entities/google-calendar-connection.entity';
 import { GoogleCalendarEventLinkEntity } from '@src/database/entities/google-calendar-event-link.entity';
 import { GoogleCalendarConnectionService } from './connection.service';
-import { GoogleCalendarClient, GoogleEventResource } from './google-calendar.client';
-import { isRecurrence, toRRule } from '@src/module/calendar/recurrence';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
+import { GoogleCalendarClient } from './google-calendar.client';
+import { toGoogleEvent } from './google-event.mapper';
 
 /**
  * 앱 일정 변경을 연결된 구글 캘린더로 push (단방향, best-effort).
@@ -41,7 +39,7 @@ export class GoogleCalendarSyncService {
       const wanted = this.shouldPush(connection, event);
       if (wanted && link) {
         const token = await this.connections.validAccessToken(connection);
-        await this.client.updateEvent(token, connection.targetCalendarId, link.googleEventId, this.toResource(event));
+        await this.client.updateEvent(token, connection.targetCalendarId, link.googleEventId, toGoogleEvent(event));
       } else if (wanted && !link) {
         await this.insert(connection, event);
       } else if (!wanted && link) {
@@ -82,7 +80,7 @@ export class GoogleCalendarSyncService {
 
   private async insert(connection: GoogleCalendarConnectionEntity, event: CalendarEventEntity): Promise<void> {
     const token = await this.connections.validAccessToken(connection);
-    const googleEventId = await this.client.insertEvent(token, connection.targetCalendarId, this.toResource(event));
+    const googleEventId = await this.client.insertEvent(token, connection.targetCalendarId, toGoogleEvent(event));
     await this.linkRepo().save(this.linkRepo().create({ connectionId: connection.id, calendarEventId: event.id, googleEventId }));
   }
 
@@ -112,24 +110,5 @@ export class GoogleCalendarSyncService {
 
   private shouldPush(connection: GoogleCalendarConnectionEntity, event: CalendarEventEntity): boolean {
     return connection.calendarId.length === 0 || connection.calendarId.includes(event.calendarId);
-  }
-
-  /** CalendarEventEntity → Google Calendar event resource. */
-  private toResource(event: CalendarEventEntity): GoogleEventResource {
-    const recurrence = isRecurrence(event.recurrence) ? [toRRule(event.recurrence)] : undefined;
-    const base = { summary: event.title, location: event.location, description: event.description, recurrence };
-    if (event.allDay) {
-      const start = this.toIsoDate(event.startAt);
-      // Google 종일 일정의 end.date 는 배타적(exclusive) → 종료일 + 1일.
-      const endSource = event.endAt ?? event.startAt;
-      const end = this.toIsoDate(new Date(endSource.getTime() + DAY_MS));
-      return { ...base, start: { date: start }, end: { date: end } };
-    }
-    const endAt = event.endAt ?? new Date(event.startAt.getTime() + 60 * 60 * 1000);
-    return { ...base, start: { dateTime: event.startAt.toISOString() }, end: { dateTime: endAt.toISOString() } };
-  }
-
-  private toIsoDate(date: Date): string {
-    return date.toISOString().slice(0, 10);
   }
 }
