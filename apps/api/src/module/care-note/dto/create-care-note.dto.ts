@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Length, Matches, Min } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsInt, IsOptional, IsString, Length, Matches, Min } from 'class-validator';
 
 export class CreateCareNoteDto {
   /** 기록 종류 id (care-note-types). 생략하면 활성 종류 중 첫 번째. */
@@ -32,4 +32,11 @@ export class CreateCareNoteDto {
   @IsString()
   @Length(1, 2000)
   statusNote?: string;
+
+  /** 본문에서 @ 로 언급한 교인 id. 같은 교회 교인만 남긴다. 수정 때 보내면 통째로 바뀐다. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsInt({ each: true })
+  mentionedMemberIds?: number[];
 }

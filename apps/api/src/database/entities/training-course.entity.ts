@@ -54,4 +54,7 @@ export class TrainingCourseEntity extends BaseDateEntityWithDeletedAt {
   /** 수료하면 공동체 간사 등록을 제안할지 (선교사학교처럼 간사로 이어지는 과정). */
   @Column({ comment: '수료 시 간사 등록 제안', default: false })
   completionSuggestsResident!: boolean;
+
+  @Column({ type: 'varchar', length: 16, nullable: true, comment: '직접 고른 아이콘(이모지). null 이면 이름으로 자동 배정' })
+  icon?: string | null;
 }

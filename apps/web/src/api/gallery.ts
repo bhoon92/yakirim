@@ -1,6 +1,7 @@
 export type ChurchEvent = {
   id: number;
   name: string;
+  icon: string | null;
   date: string | null;
   description: string | null;
   sortOrder: number;
@@ -44,6 +45,16 @@ async function del(url: string): Promise<void> {
 // ── 행사(폴더) ───────────────────────────
 export const listEvents = () => getJson<ChurchEvent[]>('/api/events');
 export const createEvent = (body: { name: string; date?: string; description?: string }) => postJson<ChurchEvent>('/api/events', body);
+export async function updateEvent(id: number, body: { icon: string | null }): Promise<ChurchEvent> {
+  const res = await fetch(`/api/events/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`/api/events/${id} ${res.status}`);
+  return res.json();
+}
 export const deleteEvent = (id: number) => del(`/api/events/${id}`);
 
 // ── 사진 ─────────────────────────────────

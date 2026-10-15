@@ -1,3 +1,4 @@
+import { detectTrigger } from '@/lib/autocomplete/detect-trigger';
 /**
  * 노션처럼 `:이름` 으로 이모지를 넣는 기능의 순수 로직 — 트리거 감지와 검색 순위.
  * 데이터는 emoji-index.ts 가 처음 쓸 때 불러온다.
@@ -11,24 +12,11 @@ export type EmojiEntry = {
   keys: string[];
 };
 
-export type ShortcodeMatch = {
-  /** `:` 의 위치 — 고르면 여기부터 커서까지를 이모지로 바꾼다 */
-  start: number;
-  query: string;
-};
+export type { TriggerMatch as ShortcodeMatch } from '@/lib/autocomplete/detect-trigger';
 
-/**
- * 커서 앞 글자에서 `:검색어` 를 찾는다.
- * `:` 앞은 줄 처음이거나 공백이어야 한다 — "10:30", "https://" 같은 데서 뜨지 않게.
- * 숫자만 있는 검색어도 무시한다.
- */
-export function detectShortcode(value: string, caret: number): ShortcodeMatch | null {
-  const before = value.slice(0, caret);
-  const match = /(?:^|\s):([^\s:]{1,30})$/.exec(before);
-  if (!match) return null;
-  const query = match[1];
-  if (/^\d+$/.test(query)) return null;
-  return { start: caret - query.length - 1, query };
+/** `:검색어` 찾기 — detectTrigger 의 이모지 판. */
+export function detectShortcode(value: string, caret: number) {
+  return detectTrigger(value, caret, ':');
 }
 
 /** 한글 조합 중인 마지막 낱자(ㄱ~ㅎ, ㅏ~ㅣ)는 아직 글자가 아니라 검색에서 뺀다 — ":하ㅌ" → "하" */

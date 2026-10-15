@@ -136,7 +136,7 @@ export function TrainingPage() {
                 <CardContent className="space-y-2 py-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2.5">
-                      <EmojiTile seed={cohort.courseName} kind="training" size="sm" />
+                      <EmojiTile seed={cohort.courseName} kind="training" emoji={cohort.courseIcon ?? undefined} size="sm" />
                       <p className="truncate font-semibold">{cohort.label}</p>
                     </div>
                     <Badge tone={STATUS_TONE[cohort.status]}>{COHORT_STATUS_LABEL[cohort.status]}</Badge>

@@ -23,6 +23,8 @@ export type HomeScheduleItem = {
   startAt: string;
   allDay: boolean;
   layer: string;
+  /** 달력 레이어에 직접 고른 아이콘. null 이면 화면이 이름으로 자동 배정 */
+  layerIcon: string | null;
   color: string;
 };
 
@@ -43,6 +45,8 @@ export type PipelineStage = {
 export type OngoingCohort = {
   cohortId: number;
   label: string;
+  /** 과정에 직접 고른 아이콘 */
+  icon: string | null;
   startDate: string;
   enrolledCount: number;
   sessionCount: number;
@@ -145,11 +149,12 @@ export class HomeService {
       DataSources.instance.getRepository(TrainingEnrollmentEntity).find({ where: { churchId, cohortId: In(cohortIds) } }),
       DataSources.instance.getRepository(TrainingSessionEntity).find({ where: { churchId, cohortId: In(cohortIds) } }),
     ]);
-    const courseMap = new Map(courses.map(course => [course.id, course.name]));
+    const courseMap = new Map(courses.map(course => [course.id, course]));
 
     return cohorts.map(cohort => ({
       cohortId: cohort.id,
-      label: `${courseMap.get(cohort.courseId) ?? '훈련'} ${cohort.name}`,
+      label: `${courseMap.get(cohort.courseId)?.name ?? '훈련'} ${cohort.name}`,
+      icon: courseMap.get(cohort.courseId)?.icon ?? null,
       startDate: cohort.startDate,
       enrolledCount: enrollments.filter(row => row.cohortId === cohort.id).length,
       sessionCount: sessions.filter(row => row.cohortId === cohort.id).length,
@@ -174,6 +179,7 @@ export class HomeService {
         startAt: event.startAt,
         allDay: event.allDay,
         layer: calendar?.name ?? '일정',
+        layerIcon: calendar?.icon ?? null,
         color: calendar?.color ?? 'oklch(0.6 0.14 250)',
       };
     });

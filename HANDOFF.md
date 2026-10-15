@@ -143,7 +143,7 @@ PR(develop·main 대상)과 develop·main 푸시마다: lint·prettier → 웹 �
 | 기록 종류 기본값 | `파송보고` 가 아직 기본에 있다. 교인 카드에서 뺄지 사용자 답변 대기 |
 | ~~소속 3블록~~ | ✅ 2026-10-14 "소속" 한 칸으로 합침 (있는 종류만 한 줄씩) |
 | 교인 프로필 사진 | 컬럼 없음 → 이니셜 아바타. 컬럼 + S3(갤러리 인프라 재사용) |
-| 이모지 직접 고르기 | 이름 해시 자동 배정 중 |
+| ~~이모지 직접 고르기~~ | ✅ 2026-10-15 훈련 과정·달력 레이어·갤러리 행사에 `icon` 컬럼 + `IconPicker`. null 이면 이름 해시 자동 |
 | 조직 정렬 | 모달 제거 때 드래그 정렬이 빠졌다 |
 | 조직 대분류 개수 | 3종 고정(각각 소속 이력 테이블 + `budget_allocation.target_kind`) |
 | 조직 계층 | flex 는 3단, 우리는 2단. reference 에 `parentId` 필요 |
@@ -228,6 +228,8 @@ pg 드라이버가 `date` 컬럼을 **JS `Date` 로 주는 경우**(원시 쿼�
   부분 유니크 인덱스 때문에 **닫고 나서 열어야** 한다
 - **정체 판정은 `STALLED_CONDITION` 한 문장**(member-status-history.service) — `listStalled()` 와 `MemberService.list()` 의 `stalled` 필터가 같이 쓴다.
   "오늘"은 DB `CURRENT_DATE` 가 아니라 `stalledParams()` 로 앱이 넘긴다(운영 DB 는 UTC). 두 결과가 같은지는 테스트가 대조한다
+- **파이프라인 보드(`/app/pipeline`, `GET /members/pipeline`)** — 단계 이동은 따로 없고 `PATCH /members/:id {statusId}` (이력 record 경유). 정체 표시는 listStalled 와 같은 기준(테스트가 대조)
+- **심방 기록 @멘션** — 본문엔 "@이름" 글자만, 연결은 `care_note.mentioned_member_ids`. 언급된 사람 카드에 백링크(`GET …/care-notes/mentions`). 자동완성은 `lib/autocomplete`(이모지 `:` 와 같은 훅)
 - **글자 입력칸은 `Input` / `Textarea`(components/ui) 를 쓴다** — 노션처럼 `:이름` 이모지 입력(lib/emoji)이 붙어 있다. 맨 `<input>`/`<textarea>` 에는 안 붙는다
 - **Enter 로 저장하는 입력칸은 `isSubmitEnter(event)`** — 맨 `event.key === 'Enter'` 는 웹 lint 가 막는다(한글 조합 중 Enter 두 번 → 요청 두 번)
 - **훈련 출석 ≠ 예배 출석**: `training_attendance` vs `attendance`. 합치지 말 것

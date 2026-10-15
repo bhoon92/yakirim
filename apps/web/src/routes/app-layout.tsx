@@ -14,12 +14,13 @@ import {
   Network,
   Search,
   Settings,
+  SquareKanban,
   Users,
   Wallet,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useRef, useState, type ComponentType, type CSSProperties } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router';
+import { Link, Outlet, useLocation } from 'react-router';
 
 import { useAuth } from '@/auth/auth-context';
 import { ChurchBrandingProvider, useChurchBranding } from '@/branding/church-branding';
@@ -27,6 +28,7 @@ import { ChurchLogo } from '@/branding/church-logo';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { CommandPalette } from '@/components/command-palette';
 
 type NavItem = {
   to: string;
@@ -53,6 +55,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/app/residents', label: '간사', icon: Home },
       { to: '/app/members', label: '교인', icon: Users },
+      { to: '/app/pipeline', label: '파이프라인', icon: SquareKanban },
       { to: '/app/training', label: '훈련', icon: GraduationCap },
       { to: '/app/missionaries', label: '선교사', icon: Globe2 },
     ],
@@ -185,27 +188,25 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
  * 검색은 아직 백엔드 전역 검색이 없어 교인 검색으로 보낸다(있는 것만 연결).
  */
 function TopBar() {
-  const navigate = useNavigate();
-  const [query, setQuery] = useState('');
-
-  const submit = (event: React.FormEvent) => {
-    event.preventDefault();
-    const keyword = query.trim();
-    navigate(keyword ? `/app/members?q=${encodeURIComponent(keyword)}` : '/app/members');
-  };
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
   // flex 의 toolbox — 높이 56px(--sizes-xlarge)에 고정
   return (
     <header className="sticky top-0 z-20 hidden h-14 items-center gap-3 rounded-t-xl border-b border-[var(--color-border)] bg-[var(--color-background)]/90 px-5 backdrop-blur md:flex">
-      <form onSubmit={submit} className="relative max-w-sm flex-1">
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-[var(--color-muted-foreground)]" />
-        <input
-          value={query}
-          onChange={event => setQuery(event.target.value)}
-          placeholder="교인을 검색해보세요"
-          className="h-8 w-full rounded-md bg-[var(--color-muted)] pr-3 pl-8 text-sm font-medium outline-none transition-shadow placeholder:font-normal placeholder:text-[var(--color-muted-foreground)] focus:bg-[var(--color-background)] focus:shadow-[var(--shadow-input-focus)]"
-        />
-      </form>
+      {/* 노션처럼 검색창 = 빠른 이동(⌘K). 교인뿐 아니라 메뉴·간사·선교사·훈련 기수까지 찾는다 */}
+      <button
+        type="button"
+        onClick={() => setPaletteOpen(true)}
+        className="relative flex h-8 max-w-sm flex-1 items-center rounded-md bg-[var(--color-muted)] pr-2 pl-8 text-left text-sm text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)]"
+      >
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+        <span className="flex-1">검색하거나 이동하기</span>
+        <kbd className="rounded border border-[var(--color-border)] bg-[var(--color-background)] px-1.5 text-[11px]">
+          {isMac ? '⌘K' : 'Ctrl K'}
+        </kbd>
+      </button>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} navItems={NAV_GROUPS.flatMap(group => group.items)} />
 
       <div className="ml-auto flex items-center gap-1">
         <Link

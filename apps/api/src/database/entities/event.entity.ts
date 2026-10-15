@@ -23,4 +23,7 @@ export class EventEntity extends BaseDateEntityWithDeletedAt {
 
   @Column({ type: 'smallint', default: 0 })
   sortOrder!: number;
+
+  @Column({ type: 'varchar', length: 16, nullable: true, comment: '직접 고른 아이콘(이모지). null 이면 이름으로 자동 배정' })
+  icon?: string | null;
 }
