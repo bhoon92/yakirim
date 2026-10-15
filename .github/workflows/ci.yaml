@@ -1,4 +1,4 @@
-# PR 과 develop 푸시마다 도는 검사. 배포는 Render 가 develop 을 보고 따로 한다 (render.yaml).
+# PR 과 develop·main 푸시마다 도는 검사. 배포는 Render 가 main 을 보고 따로 한다 (render.yaml).
 #
 # 핵심은 마지막 두 단계다. migrationsRun: true 라 마이그레이션이 실패하면 앱이 안 뜨고 = 배포 실패인데,
 # 타입체크로는 절대 못 잡는다. 그래서 빈 Postgres 에서 운영과 같은 방식으로 부팅해 본다.
@@ -8,7 +8,7 @@ on:
   pull_request:
     branches: [develop, main]
   push:
-    branches: [develop]
+    branches: [develop, main]
 
 concurrency:
   group: ci-${{ github.ref }}
