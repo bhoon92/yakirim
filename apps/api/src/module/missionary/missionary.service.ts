@@ -141,7 +141,7 @@ export class MissionaryService {
       );
 
       if (stage?.countsAsActive) {
-        await this.syncMemberStatus(manager, churchId, memberId, true);
+        await this.syncMemberStatus(manager, churchId, memberId, true, commissionedAt ?? this.today());
       }
       return profile;
     });
@@ -320,20 +320,30 @@ export class MissionaryService {
       if (!profile.commissionedAt) {
         await manager.getRepository(MissionaryProfileEntity).update({ id: profile.id, churchId }, { commissionedAt: date });
       }
-      await this.syncMemberStatus(manager, churchId, profile.memberId, true);
+      await this.syncMemberStatus(manager, churchId, profile.memberId, true, date);
       return;
     }
-    await this.syncMemberStatus(manager, churchId, profile.memberId, false);
+    await this.syncMemberStatus(manager, churchId, profile.memberId, false, date);
   }
 
-  /** 해당 systemKey 재적상태가 없으면 조용히 넘어간다 (교회가 상태를 지웠을 수 있다). */
-  private async syncMemberStatus(manager: EntityManager, churchId: number, memberId: number, commissioned: boolean): Promise<void> {
+  /**
+   * 해당 systemKey 재적상태가 없으면 조용히 넘어간다 (교회가 상태를 지웠을 수 있다).
+   * date 는 단계를 옮긴 날 — 지난 일을 나중에 기록해도 이력 구간이 그 날짜에서 시작해야 단계 이동 집계가 맞는다.
+   */
+  private async syncMemberStatus(
+    manager: EntityManager,
+    churchId: number,
+    memberId: number,
+    commissioned: boolean,
+    date: string
+  ): Promise<void> {
     const systemKey = commissioned ? STATUS_KEY_COMMISSIONED : STATUS_KEY_WORKER;
     const status = await manager.getRepository(MemberStatusEntity).findOne({ where: { churchId, systemKey } });
     if (!status) return;
     await manager.getRepository(MemberEntity).update({ id: memberId, churchId }, { statusId: status.id });
     // 자동 전환도 이력에 남긴다. 사람이 바꾼 게 아니라는 걸 사유로 구분해 둔다.
     await this.statusHistory.record(manager, churchId, memberId, status.id, {
+      date,
       reason: commissioned ? '파송 단계 진입 (자동)' : '파송 단계 이탈 (자동)',
     });
   }

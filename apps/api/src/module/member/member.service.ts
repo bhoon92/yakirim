@@ -6,7 +6,7 @@ import { MemberStatusEntity } from '@src/database/entities/member-status.entity'
 import { AffiliationService, type AffiliationTagSet } from '@src/module/affiliation/affiliation.service';
 import { MemberPositionService } from '@src/module/position/member-position.service';
 import { ShepherdService, type ShepherdTag } from '@src/module/shepherd/shepherd.service';
-import { MemberStatusHistoryService } from './member-status-history.service';
+import { MemberStatusHistoryService, STALLED_CONDITION, stalledParams } from './member-status-history.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { ListMemberQueryDto } from './dto/list-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
@@ -67,8 +67,7 @@ export class MemberService {
       qb.andWhere('m.statusId = :statusId', { statusId: query.statusId });
     }
 
-    // 정체 필터 — 대시보드 카드의 189명을 실제로 훑을 수 있어야 한다.
-    // 판정 기준은 MemberStatusHistoryService.listStalled 와 동일하게 유지할 것.
+    // 정체 필터 — 대시보드 카드의 인원을 실제로 훑을 수 있어야 한다. 판정은 listStalled 와 같은 STALLED_CONDITION.
     if (query.stalled) {
       qb.andWhere(
         `EXISTS (
@@ -77,10 +76,9 @@ export class MemberService {
            WHERE h.member_id = m.id
              AND h.church_id = m.church_id
              AND h.deleted_at IS NULL
-             AND h.end_date IS NULL
-             AND s.stalls_after_days IS NOT NULL
-             AND h.start_date <= CURRENT_DATE - (s.stalls_after_days || ' days')::interval
-         )`
+             AND ${STALLED_CONDITION}
+         )`,
+        stalledParams()
       );
     }
 
