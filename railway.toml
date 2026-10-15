@@ -1,0 +1,11 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "pnpm install --frozen-lockfile && pnpm build:web && pnpm build:api"
+
+[deploy]
+# apps/api 디렉터리에서 실행해야 node-config가 config/ 를 올바르게 찾음
+startCommand = "cd apps/api && node dist/src/main"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

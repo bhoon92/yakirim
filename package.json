@@ -1,0 +1,47 @@
+{
+  "name": "yakirim",
+  "version": "0.0.1",
+  "description": "교회 관리 웹 (monorepo)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "prepare": "husky install",
+    "dev:api": "direnv exec . pnpm --filter @yakirim/api start:local",
+    "dev:web": "direnv exec . pnpm --filter @yakirim/web dev",
+    "build:api": "pnpm --filter @yakirim/api build",
+    "build:web": "pnpm --filter @yakirim/web build",
+    "lint": "pnpm -r lint",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
+    "db:reset": "docker compose down -v && docker compose up -d postgres",
+    "migration:run": "pnpm --filter @yakirim/api migration:run",
+    "migration:generate": "pnpm --filter @yakirim/api migration:generate",
+    "migration:revert": "pnpm --filter @yakirim/api migration:revert"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.39.2",
+    "@typescript-eslint/eslint-plugin": "^8.52.0",
+    "@typescript-eslint/parser": "^8.52.0",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "eslint-plugin-unused-imports": "^4.3.0",
+    "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "jiti": "^2.7.0",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.4.2",
+    "typescript-eslint": "^8.52.0"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  },
+  "packageManager": "pnpm@11.23.0"
+}

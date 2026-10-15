@@ -1,0 +1,54 @@
+# Render Blueprint — 무료 웹 서비스 하나에 웹(Vite 빌드)과 API(NestJS)를 함께 올린다.
+# DB 는 Render 무료 Postgres 를 쓰지 않는다: 만든 지 30일이면 만료되고 백업도 없다(2026-10 확인).
+# 대신 Neon 무료 Postgres(만료 없음, SSL 필수)에 붙인다 — POSTGRES_DB_SSL=true.
+#
+# 무료 웹 서비스는 15분 동안 요청이 없으면 잠들고, 깨는 데 1분쯤 걸린다.
+# 부팅할 때마다 마이그레이션이 실행된다(migrationsRun: true) — 실패하면 앱이 뜨지 않으니 로그부터 볼 것.
+services:
+  - type: web
+    name: yakirim
+    runtime: node
+    plan: free
+    region: singapore
+    branch: develop
+    buildCommand: npm install -g pnpm@11.23.0 && pnpm install --frozen-lockfile && pnpm build:web && pnpm build:api
+    # apps/api 에서 실행해야 node-config 가 config/ 를 찾는다
+    startCommand: cd apps/api && node dist/src/main
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # 필수 — 없으면 UTC 로 돌아 새벽 0~9시 기록이 어제 날짜로 들어간다 (HANDOFF §3.3)
+      - key: TZ
+        value: Asia/Seoul
+      - key: NODE_VERSION
+        value: 22.17.1
+      # Neon 연결 정보 (대시보드의 Connection details)
+      - key: POSTGRES_DB_HOST
+        sync: false
+      - key: POSTGRES_DB_NAME
+        sync: false
+      - key: POSTGRES_DB_USERNAME
+        sync: false
+      - key: POSTGRES_DB_PASSWORD
+        sync: false
+      - key: POSTGRES_DB_SSL
+        value: 'true'
+      - key: JWT_CMS_ACCESS_SECRET_KEY
+        generateValue: true
+      - key: JWT_CMS_REFRESH_SECRET_KEY
+        generateValue: true
+      # 구글 캘린더 토큰 암호화 키. 한 번 생기면 바꾸지 말 것 — 바꾸면 저장된 연동을 풀 수 없다
+      - key: TOKEN_ENCRYPTION_KEY
+        generateValue: true
+      # 없으면 부팅이 실패한다 — GoogleStrategy 가 시작할 때 만들어진다 (HANDOFF §2.2)
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # https://<서비스 주소>/api/auth/google/callback
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      # https://<서비스 주소>
+      - key: WEB_BASE_URL
+        sync: false

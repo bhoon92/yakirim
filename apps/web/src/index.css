@@ -1,0 +1,193 @@
+@import 'tailwindcss';
+@import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 디자인 토큰 — flex(flex.team) 벤치마킹
+ *
+ * 값은 감으로 맞춘 게 아니라 flex 가 실제로 배포하는 CSS 번들
+ * (flex.team/landing-static/_next/static/css/*.css — vanilla-extract 로 뽑힌
+ * `--colors-*` / `--radii-*` / `--shadows-*` / `--sizes-*` 토큰)에서 그대로 가져왔다.
+ * 우리 쪽 이름으로 옮겨 담았을 뿐 색·반경·그림자 수치는 flex 원본이다.
+ *
+ * flex 에서 배운 것 네 가지:
+ *   1. 회색이 순수 회색이 아니다 — #242a30 에서 파생돼 푸른기가 돈다
+ *   2. 모서리가 생각보다 안 둥글다 — 기본 8px, 실사용 최빈값 6px
+ *   3. 테두리보다 inset ring 그림자를 쓴다 — 레이아웃을 밀지 않는 1px
+ *   4. 본문 기본 굵기가 400 이 아니라 500 이다 (400 은 거의 안 쓴다)
+ * ───────────────────────────────────────────────────────────────────────── */
+
+@theme {
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI',
+    'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+
+  /* ── 타이포 스케일 ─────────────────────────────────────────────────────
+   * flex 의 실사용 빈도는 14px(22회) · 12px(22회) · 13px(16회) 에 몰려 있고
+   * 큰 제목만 28px 로 튄다. 24px·30px 같은 중간 크기는 쓰지 않는다.
+   * Tailwind 기본(16/14/12…)보다 한 칸씩 작아지므로 `text-sm` 을 쓰던
+   * 기존 코드가 그대로 flex 밀도로 내려온다 — 화면 파일을 안 건드려도 된다.
+   * ─────────────────────────────────────────────────────────────────── */
+  --text-xs: 0.75rem; /* 12 — 캡션·메타 */
+  --text-xs--line-height: 1.5; /* 18px */
+  --text-sm: 0.8125rem; /* 13 — 목록 본문 */
+  --text-sm--line-height: 1.3846; /* 18px */
+  --text-base: 0.875rem; /* 14 — 기본 본문 */
+  --text-base--line-height: 1.4286; /* 20px */
+  --text-lg: 1rem; /* 16 */
+  --text-lg--line-height: 1.375; /* 22px */
+  --text-xl: 1.125rem; /* 18 — 섹션 제목 */
+  --text-xl--line-height: 1.3333; /* 24px */
+  --text-2xl: 1.375rem; /* 22 */
+  --text-2xl--line-height: 1.2727; /* 28px */
+  --text-3xl: 1.75rem; /* 28 — 페이지 제목(flex 최대) */
+  --text-3xl--line-height: 1.2143; /* 34px */
+  --text-4xl: 2rem; /* 32 — 로그인·온보딩 히어로 */
+  --text-4xl--line-height: 1.1875; /* 38px */
+
+  /* 큰 글자는 자간을 조인다 — flex 는 28px 제목에 -0.04em 을 준다 */
+  --tracking-tight: -0.02em;
+  --tracking-tighter: -0.04em;
+
+  /* ── 뉴트럴 ────────────────────────────────────────────────────────────
+   * flex 의 검정은 #242a30 — 순수 블랙이 아니라 푸른기가 도는 잉크색이고,
+   * 회색 램프 전체가 여기서 파생된다. 채도 0 회색과 나란히 두면
+   * 우리 쪽이 누렇게 뜬다. 아래 숫자는 flex 의 black0xx 단계 그대로.
+   * ─────────────────────────────────────────────────────────────────── */
+  --color-background: #fdfdfd; /* black001 */
+  --color-foreground: #242a30; /* black — 잉크 */
+  --color-muted: #f4f4f5; /* black005 */
+  --color-muted-foreground: #73777b; /* black064 */
+  --color-border: #e5e5e6; /* black012 */
+  --color-input: #f6f6f7; /* black004 */
+
+  /* 포커스 링 — flex 는 검정이 아니라 primary(초록) 1px inset 을 쓴다 */
+  --color-ring: #09bb1b;
+
+  --color-card: #ffffff;
+  --color-card-foreground: #242a30;
+
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #3e4449; /* grayDark */
+  --color-accent: #edeeee; /* black008 */
+  --color-accent-foreground: #2d3338; /* black096 */
+
+  --color-destructive: #f24b17; /* flex orange */
+  --color-destructive-foreground: #ffffff;
+
+  /* ── 브랜드 ────────────────────────────────────────────────────────────
+   * flex 의 primary 는 #09bb1b — 우리가 쓰던 초록보다 훨씬 선명하다.
+   * 주요 행동(CTA)·포커스·선택 상태에만 쓰고 본문은 계속 모노톤.
+   * ─────────────────────────────────────────────────────────────────── */
+  --color-brand: #09bb1b; /* primary */
+  --color-brand-hover: #058012; /* primaryDark */
+  --color-brand-active: #034c0b; /* primaryDarker */
+  --color-brand-foreground: #ffffff;
+  --color-brand-muted: #b7e8bd; /* primaryLighter */
+  --color-brand-subtle: #f2fdf3; /* primaryLightest */
+
+  /* primary = 채워진 버튼. flex 는 주요 버튼을 초록으로 채운다 */
+  --color-primary: #09bb1b;
+  --color-primary-foreground: #ffffff;
+
+  /* 페이지 캔버스 — 흰 패널이 그 위에 떠 있는 바닥 */
+  --color-canvas: #f4f4f5;
+
+  /* 주의 환기 */
+  --color-alert: #f24b17;
+
+  /* ── 타일 8색 ──────────────────────────────────────────────────────────
+   * 이모지 타일·이니셜 아바타 배경. flex 의 8개 색상군에서
+   * Lighter(배경) + Dark(그 위 글자) 쌍을 그대로 가져왔다.
+   * ─────────────────────────────────────────────────────────────────── */
+  --color-tile-1: #b7e8bd; /* greenLighter  */
+  --color-tile-1-ink: #058012; /* greenDark     */
+  --color-tile-2: #ecd8b6; /* goldLighter   */
+  --color-tile-2-ink: #8a5700; /* goldDark      */
+  --color-tile-3: #ffcec2; /* orangeLighter */
+  --color-tile-3-ink: #c32700; /* orangeDark    */
+  --color-tile-4: #facddd; /* magentaLighter*/
+  --color-tile-4-ink: #aa325e; /* magentaDark   */
+  --color-tile-5: #ddcced; /* purpleLighter */
+  --color-tile-5-ink: #5b288d; /* purpleDark    */
+  --color-tile-6: #c2e3ff; /* blueLighter   */
+  --color-tile-6-ink: #1545a1; /* blueDark      */
+  --color-tile-7: #b4edec; /* cyanLighter   */
+  --color-tile-7-ink: #03706e; /* cyanDark      */
+  --color-tile-8: #c5dff2; /* cosmicBlueLighter */
+  --color-tile-8-ink: #1c5992; /* cosmicBlueDark    */
+
+  /* ── 모서리 ────────────────────────────────────────────────────────────
+   * flex 의 --radii-default 는 8px 이고 실사용 최빈값은 6px 이다.
+   * 우리는 카드 22px / 버튼 18px 을 쓰고 있었다 — 두 배 이상 둥글었다.
+   * ─────────────────────────────────────────────────────────────────── */
+  --radius-sm: 0.25rem; /* 4  — 배지·체크박스 */
+  --radius-md: 0.375rem; /* 6  — 버튼·입력(최빈값) */
+  --radius-lg: 0.5rem; /* 8  — flex 기본값 */
+  --radius-xl: 0.625rem; /* 10 — 카드 */
+  --radius-2xl: 0.75rem; /* 12 — 큰 카드·패널 */
+  --radius-3xl: 1rem; /* 16 — 모달 */
+
+  /* ── 컨트롤 높이 ───────────────────────────────────────────────────────
+   * flex --sizes: xsmall 24 / small 32 / default 40 / large 48 / xlarge 56
+   * ─────────────────────────────────────────────────────────────────── */
+  --size-control-xs: 1.5rem; /* 24 */
+  --size-control-sm: 2rem; /* 32 */
+  --size-control-md: 2.5rem; /* 40 */
+  --size-control-lg: 3rem; /* 48 */
+  --size-control-xl: 3.5rem; /* 56 */
+
+  /* ── 그림자 ────────────────────────────────────────────────────────────
+   * flex 는 테두리 대신 inset ring 을 쓴다 — 1px 이 레이아웃을 밀지 않고,
+   * 그 위에 아주 얕은 앰비언트를 얹는다. 아래는 flex 의 elevation0~4·dialog.
+   * ─────────────────────────────────────────────────────────────────── */
+  --shadow-xs: inset 0 0 0 1px rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 0 0 1px rgb(15 15 15 / 0.07), 0 2px 5px rgb(15 15 15 / 0.1);
+  --shadow-md: 0 0 1px rgb(0 0 0 / 0.04), 0 3px 10px rgb(0 0 0 / 0.06), 0 7px 22px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 1px 5px rgb(0 0 0 / 0.03), 0 5px 15px rgb(0 0 0 / 0.05), 0 7px 38px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 0 0 1px rgb(0 0 0 / 0.04), 0 24px 72px rgb(36 42 48 / 0.22);
+
+  /* 버튼 — flex 의 elevation0. 위는 살짝 밝고 아래 1px 이 눌린 느낌 */
+  --shadow-button: 0 2px 6px rgb(0 0 0 / 0.02), inset 0 -1px 0 rgb(0 0 0 / 0.06), inset 0 0 0 1px rgb(0 0 0 / 0.08);
+  /* 입력 — 테두리 대신 inset ring */
+  --shadow-input: inset 0 0 0 1px rgb(0 0 0 / 0.1);
+  --shadow-input-focus: inset 0 0 0 1px #09bb1b;
+  --shadow-input-error: inset 0 0 0 1px #f24b17;
+  /* 배지·태그 */
+  --shadow-tag: inset 0 0 0 1px rgb(0 0 0 / 0.03);
+  /* 본문 패널 — 캔버스 위에 뜬 흰 판 (flex pageRoot) */
+  --shadow-panel: 0 0 12px 0 rgb(0 0 0 / 0.04), -1px 0 0 0 rgb(0 0 0 / 0.04), 0 0 24px 0 rgb(0 0 0 / 0.04);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-canvas);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    /* flex 도 같은 조합을 쓴다 — ss06(둥근 따옴표) + ss08 */
+    font-feature-settings: 'ss06', 'ss08', 'cv11';
+    /* flex 의 본문 기본 굵기는 500 이다. 400 은 거의 쓰지 않는다 */
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+
+  /* 숫자는 표·지표에서 자리가 흔들리지 않게 */
+  th,
+  td {
+    font-variant-numeric: tabular-nums;
+  }
+}

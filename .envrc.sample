@@ -1,0 +1,64 @@
+# ─────────────────────────────────────────────────────────────
+# 로컬 개발 (localdev) — direnv 로드. 복사 후 .envrc 로 저장.
+# 프로덕션은 Railway 대시보드 Variables 탭에 직접 입력.
+# ─────────────────────────────────────────────────────────────
+
+# 환경
+export NODE_ENV=localdev
+
+# DB (로컬 PostgreSQL — Homebrew postgresql@14)
+export POSTGRES_DB_HOST=localhost
+export POSTGRES_DB_USERNAME=root
+export POSTGRES_DB_PASSWORD=root1234
+export POSTGRES_DB_NAME=yakirim
+
+# JWT (prod: openssl rand -base64 48 로 각각 별도 생성)
+export JWT_CMS_ACCESS_SECRET_KEY=local-dev-access-secret-change-in-production
+export JWT_CMS_REFRESH_SECRET_KEY=local-dev-refresh-secret-change-in-production
+
+# 구글 캘린더 토큰 암호화 (비워두면 localdev 기본값을 쓴다)
+export TOKEN_ENCRYPTION_KEY=
+
+# Google OAuth (로그인)
+# prod redirect: https://YOUR_DOMAIN/api/auth/google/callback
+export GOOGLE_CLIENT_ID=your-google-client-id
+export GOOGLE_CLIENT_SECRET=your-google-client-secret
+export GOOGLE_REDIRECT_URI=http://localhost:5173/api/auth/google/callback
+
+# 웹 베이스 URL (Google Calendar OAuth 콜백 리다이렉트 대상)
+# prod: https://YOUR_DOMAIN.up.railway.app
+export WEB_BASE_URL=http://localhost:5173
+
+# AWS S3 (갤러리 사진 저장)
+# prod: IAM 사용자(yakirim-s3) 키 + 버킷명
+export AWS_REGION=ap-northeast-2
+export AWS_S3_BUCKET=yakirim-photos
+export AWS_ACCESS_KEY_ID=
+export AWS_SECRET_ACCESS_KEY=
+
+# ─────────────────────────────────────────────────────────────
+# Railway 프로덕션 Variables 체크리스트
+# ─────────────────────────────────────────────────────────────
+# NODE_ENV=production
+# TZ=Asia/Seoul                          ← 서버 타임존 고정 (월집계·오늘일정 정확도)
+# PORT                                   ← Railway 자동 주입 (설정 불필요)
+#
+# POSTGRES_DB_HOST=xxx.railway.internal  ← Railway Postgres 서비스 내부 호스트
+# POSTGRES_DB_USERNAME=postgres
+# POSTGRES_DB_PASSWORD=xxx
+# POSTGRES_DB_NAME=railway
+#
+# JWT_CMS_ACCESS_SECRET_KEY=xxx          ← openssl rand -base64 48
+# JWT_CMS_REFRESH_SECRET_KEY=xxx         ← openssl rand -base64 48 (별도 생성)
+# TOKEN_ENCRYPTION_KEY=xxx               ← openssl rand -base64 32 · 한 번 정하면 바꾸지 말 것
+#
+# GOOGLE_CLIENT_ID=xxx
+# GOOGLE_CLIENT_SECRET=xxx
+# GOOGLE_REDIRECT_URI=https://YOUR_DOMAIN/api/auth/google/callback
+#
+# WEB_BASE_URL=https://YOUR_DOMAIN.up.railway.app
+#
+# AWS_REGION=ap-northeast-2
+# AWS_S3_BUCKET=yakirim-photos
+# AWS_ACCESS_KEY_ID=xxx
+# AWS_SECRET_ACCESS_KEY=xxx

@@ -1,0 +1,12 @@
+packages:
+  - 'apps/*'
+
+# pnpm 11 은 설치 시 의존성의 빌드 스크립트를 기본 차단하고, 여기서 허용 여부를 정해야 설치가 통과한다.
+# 각 패키지가 실제로 무엇을 하는지 확인하고 결정한 값:
+#   unrs-resolver → napi-postinstall (네이티브 바인딩 검증). 없으면 eslint import resolver 가 깨진다 → 허용
+#   @nestjs/core  → opencollective 후원 안내 출력. 기능과 무관 → 차단
+#   @scarf/scarf  → 설치 통계 전송(telemetry). 불필요 → 차단
+allowBuilds:
+  '@nestjs/core': false
+  '@scarf/scarf': false
+  unrs-resolver: true

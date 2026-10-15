@@ -1,0 +1,4 @@
+export const enum ExceptionMessage {
+  EXPIRED_TOKEN = 'EXPIRED_TOKEN',
+  PASSWORD_INCORRECT = 'PASSWORD_INCORRECT',
+}
