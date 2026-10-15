@@ -2,7 +2,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { Fragment, useState, type ReactNode } from 'react';
 
-import { createCareNote, deleteCareNote, listCareNoteMentions, listCareNotes, type CreateCareNotePayload } from '@/api/care-notes';
+import {
+  createCareNote,
+  createCareNoteTemplate,
+  deleteCareNote,
+  deleteCareNoteTemplate,
+  listCareNoteMentions,
+  listCareNotes,
+  listCareNoteTemplates,
+  type CareNoteTemplate,
+  type CreateCareNotePayload,
+} from '@/api/care-notes';
 import { listReferences } from '@/api/references';
 import { Button } from '@/components/ui/button';
 import { PanelToggle } from '@/components/ui/panel-toggle';
@@ -12,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/lib/permissions';
 import { todayString } from '@/lib/date';
+import { isSubmitEnter } from '@/lib/keyboard';
 import { mentionsInText } from '@/lib/autocomplete/use-member-mention';
 import { MemberDetailModal } from './member-detail-modal';
 
@@ -201,8 +212,22 @@ function NoteForm({ memberId, onDone, onCancel }: { memberId: number; onDone: ()
     });
   };
 
+  const applyTemplate = (template: CareNoteTemplate) => {
+    const dirty = content.trim() || prayerRequest.trim() || statusNote.trim();
+    if (dirty && !window.confirm(`쓰던 내용을 "${template.name}" 양식으로 바꿀까요?`)) return;
+    if (template.typeId) setTypeId(template.typeId);
+    setContent(template.content);
+    setPrayerRequest(template.prayerRequest ?? '');
+    setStatusNote(template.statusNote ?? '');
+    setPicked(new Map());
+  };
+
   return (
     <div className="mb-3 space-y-3 rounded-xl border border-dashed border-[var(--color-border)] p-3">
+      <TemplateBar
+        onApply={applyTemplate}
+        draft={{ typeId: activeTypeId, content, prayerRequest: prayerRequest || null, statusNote: statusNote || null }}
+      />
       <div className="flex flex-wrap gap-1.5">
         {selectable.length === 0 ? (
           <p className="text-xs text-[var(--color-muted-foreground)]">
@@ -257,6 +282,86 @@ function NoteForm({ memberId, onDone, onCancel }: { memberId: number; onDone: ()
           저장
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * 기록 양식 — 노션의 템플릿처럼 자주 쓰는 틀을 골라 채운다. 교회 전체가 함께 쓴다.
+ * 지금 쓰던 내용(종류·본문·기도제목·현재 상황)을 그대로 양식으로 저장할 수 있다.
+ */
+function TemplateBar({ onApply, draft }: { onApply: (template: CareNoteTemplate) => void; draft: Omit<CareNoteTemplate, 'id' | 'name'> }) {
+  const queryClient = useQueryClient();
+  const { data: templates = [] } = useQuery({ queryKey: ['care-note-templates'], queryFn: listCareNoteTemplates });
+  const [naming, setNaming] = useState(false);
+  const [name, setName] = useState('');
+
+  const saveMut = useMutation({
+    mutationFn: () => createCareNoteTemplate({ ...draft, name: name.trim() }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['care-note-templates'] });
+      setNaming(false);
+      setName('');
+    },
+    onError: error => window.alert(error instanceof Error ? error.message : '양식을 저장하지 못했습니다.'),
+  });
+  const deleteMut = useMutation({
+    mutationFn: (id: number) => deleteCareNoteTemplate(id),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['care-note-templates'] }),
+  });
+
+  if (templates.length === 0 && !draft.content.trim()) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+      <span className="text-[var(--color-muted-foreground)]">양식</span>
+      {templates.map(template => (
+        <span key={template.id} className="group inline-flex items-center rounded-full bg-[var(--color-muted)] pr-1 pl-2.5">
+          <button type="button" onClick={() => onApply(template)} className="py-1 font-medium">
+            {template.name}
+          </button>
+          <button
+            type="button"
+            aria-label={`"${template.name}" 양식 삭제`}
+            title="양식 삭제"
+            onClick={() =>
+              window.confirm(`"${template.name}" 양식을 지울까요? 이미 쓴 기록은 그대로입니다.`) && deleteMut.mutate(template.id)
+            }
+            className="ml-0.5 rounded-full p-0.5 text-[var(--color-muted-foreground)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--color-foreground)] focus-visible:opacity-100"
+          >
+            <X className="size-3" />
+          </button>
+        </span>
+      ))}
+      {draft.content.trim() &&
+        (naming ? (
+          <Input
+            autoFocus
+            emoji={false}
+            value={name}
+            maxLength={40}
+            placeholder="양식 이름 (Enter)"
+            onChange={event => setName(event.target.value)}
+            onKeyDown={event => {
+              if (event.key === 'Escape') setNaming(false);
+              if (isSubmitEnter(event) && name.trim()) {
+                event.preventDefault();
+                saveMut.mutate();
+              }
+            }}
+            onBlur={() => !name.trim() && setNaming(false)}
+            className="h-7 w-40 text-xs"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setNaming(true)}
+            className="rounded-full px-2 py-1 text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
+            title="지금 쓴 내용을 양식으로 저장"
+          >
+            + 이 내용을 양식으로
+          </button>
+        ))}
     </div>
   );
 }
