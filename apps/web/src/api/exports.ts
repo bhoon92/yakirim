@@ -18,3 +18,5 @@ export const exportTransactions = () => downloadXlsx('/api/export/transactions',
 export const exportBudgets = (fiscalYearId?: number) =>
   downloadXlsx(`/api/export/budgets${fiscalYearId ? `?fiscalYearId=${fiscalYearId}` : ''}`, 'budgets.xlsx');
 export const exportMembers = () => downloadXlsx('/api/export/members', 'members.xlsx');
+export const exportResidents = () => downloadXlsx('/api/export/residents', 'residents.xlsx');
+export const exportMissionaries = () => downloadXlsx('/api/export/missionaries', 'missionaries.xlsx');

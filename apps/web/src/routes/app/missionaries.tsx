@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Globe2, Settings2, Trash2, X } from 'lucide-react';
+import { Download, Globe2, Settings2, Trash2, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { listMembers, type Member } from '@/api/members';
@@ -25,6 +25,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { todayString } from '@/lib/date';
 import { usePermissions } from '@/lib/permissions';
+import { exportMissionaries } from '@/api/exports';
 import { cn } from '@/lib/utils';
 import { MissionaryStageManagerModal } from './missionary-stage-manager';
 
@@ -53,15 +54,21 @@ export function MissionariesPage() {
         title="선교사"
         description="파송 단계와 경과를 관리합니다. 단계 구성은 교회에 맞게 바꿀 수 있습니다."
         actions={
-          canWrite && (
-            <>
-              <Button size="sm" variant="outline" onClick={() => setManagingStages(true)}>
-                <Settings2 className="size-4" />
-                단계 관리
-              </Button>
-              <PanelToggle open={registering} onToggle={() => setRegistering(!registering)} label="선교사 등록" variant="default" />
-            </>
-          )
+          <>
+            <Button size="sm" variant="outline" onClick={() => void exportMissionaries()} aria-label="내보내기" title="엑셀로 내보내기">
+              <Download className="size-4" />
+              <span className="hidden sm:inline">내보내기</span>
+            </Button>
+            {canWrite && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => setManagingStages(true)}>
+                  <Settings2 className="size-4" />
+                  단계 관리
+                </Button>
+                <PanelToggle open={registering} onToggle={() => setRegistering(!registering)} label="선교사 등록" variant="default" />
+              </>
+            )}
+          </>
         }
       />
 
