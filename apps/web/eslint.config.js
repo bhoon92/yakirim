@@ -32,7 +32,7 @@ export default defineConfig([
   },
   {
     // keyboard.ts 는 isSubmitEnter 자체, 이모지 목록은 조합 중 Enter 를 직접 걸러서(isComposing) 고른다
-    files: ['src/lib/keyboard.ts', 'src/lib/emoji/use-emoji-shortcode.tsx'],
+    files: ['src/lib/keyboard.ts', 'src/lib/autocomplete/use-trigger-autocomplete.tsx'],
     rules: { 'no-restricted-syntax': 'off' },
   },
 ])

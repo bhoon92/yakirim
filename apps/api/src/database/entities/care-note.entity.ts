@@ -41,4 +41,7 @@ export class CareNoteEntity extends BaseDateEntityWithDeletedAt {
 
   @Column({ comment: '현재 상황 노트', type: 'text', nullable: true })
   statusNote?: string;
+
+  @Column({ type: 'int', array: true, default: () => "'{}'", comment: '본문에서 @ 로 언급한 교인 id' })
+  mentionedMemberIds!: number[];
 }

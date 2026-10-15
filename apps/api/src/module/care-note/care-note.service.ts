@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { In } from 'typeorm';
 import { DataSources } from '@src/database/data-sources';
 import { AccountEntity } from '@src/database/entities/account.entity';
 import { CareNoteEntity } from '@src/database/entities/care-note.entity';
@@ -20,8 +21,13 @@ export type CareNoteItem = {
   statusNote: string | null;
   recorderAccountId: number;
   recorderName: string | null;
+  /** 본문에서 @ 로 언급한 교인 (지워진 교인은 빠진다) */
+  mentions: { id: number; name: string }[];
   createdAt: Date;
 };
+
+/** 다른 교인의 기록에서 이 교인이 언급된 것 — 노션의 백링크. */
+export type CareNoteMentionItem = CareNoteItem & { subjectMemberId: number; subjectName: string };
 
 @Injectable()
 export class CareNoteService {
@@ -43,6 +49,7 @@ export class CareNoteService {
       content: dto.content,
       prayerRequest: dto.prayerRequest,
       statusNote: dto.statusNote,
+      mentionedMemberIds: await this.validMentions(churchId, dto.mentionedMemberIds),
     });
     return this.repo().save(row);
   }
@@ -54,15 +61,43 @@ export class CareNoteService {
       where: { churchId, memberId },
       order: { date: 'DESC', id: 'DESC' },
     });
-    if (rows.length === 0) return [];
+    return this.toItems(churchId, rows);
+  }
 
+  /** 이 교인이 언급된 다른 사람의 기록 (기록일 내림차순). */
+  async listMentioning(churchId: number, memberId: number): Promise<CareNoteMentionItem[]> {
+    await this.assertMember(churchId, memberId);
+    const rows = await this.repo()
+      .createQueryBuilder('n')
+      .where('n.churchId = :churchId', { churchId })
+      .andWhere(':memberId = ANY(n.mentioned_member_ids)', { memberId })
+      .andWhere('n.memberId <> :memberId', { memberId })
+      .orderBy('n.date', 'DESC')
+      .addOrderBy('n.id', 'DESC')
+      .getMany();
+    const items = await this.toItems(churchId, rows);
+    const subjects = await DataSources.instance
+      .getRepository(MemberEntity)
+      .find({ where: { churchId, id: In(Array.from(new Set(rows.map(row => row.memberId)))) } });
+    const subjectName = new Map(subjects.map(member => [member.id, member.name]));
+    // 기록 대상이 지워졌으면 백링크도 숨긴다
+    return items
+      .map((item, index) => ({ ...item, subjectMemberId: rows[index].memberId, subjectName: subjectName.get(rows[index].memberId) ?? '' }))
+      .filter(item => item.subjectName);
+  }
+
+  private async toItems(churchId: number, rows: CareNoteEntity[]): Promise<CareNoteItem[]> {
+    if (rows.length === 0) return [];
     const accountIds = Array.from(new Set(rows.map(note => note.recorderAccountId)));
-    const [accounts, types] = await Promise.all([
+    const mentionIds = Array.from(new Set(rows.flatMap(note => note.mentionedMemberIds ?? [])));
+    const [accounts, types, mentioned] = await Promise.all([
       DataSources.instance.getRepository(AccountEntity).find({ where: accountIds.map(id => ({ id })) }),
       DataSources.instance.getRepository(CareNoteTypeEntity).find({ where: { churchId } }),
+      mentionIds.length > 0 ? DataSources.instance.getRepository(MemberEntity).find({ where: { churchId, id: In(mentionIds) } }) : [],
     ]);
     const nameMap = new Map(accounts.map(account => [account.id, account.name]));
     const typeNameMap = new Map(types.map(type => [type.id, type.name]));
+    const memberName = new Map(mentioned.map(member => [member.id, member.name]));
 
     return rows.map(note => ({
       id: note.id,
@@ -75,6 +110,7 @@ export class CareNoteService {
       statusNote: note.statusNote ?? null,
       recorderAccountId: note.recorderAccountId,
       recorderName: nameMap.get(note.recorderAccountId) ?? null,
+      mentions: (note.mentionedMemberIds ?? []).filter(id => memberName.has(id)).map(id => ({ id, name: memberName.get(id)! })),
       createdAt: note.createdAt,
     }));
   }
@@ -82,7 +118,11 @@ export class CareNoteService {
   async update(churchId: number, memberId: number, id: number, dto: UpdateCareNoteDto): Promise<CareNoteEntity> {
     const row = await this.repo().findOne({ where: { id, churchId, memberId } });
     if (!row) throw new NotFoundException('양육 기록을 찾을 수 없습니다.');
-    await this.repo().update({ id, churchId, memberId }, dto);
+    const { mentionedMemberIds, ...rest } = dto;
+    await this.repo().update(
+      { id, churchId, memberId },
+      mentionedMemberIds !== undefined ? { ...rest, mentionedMemberIds: await this.validMentions(churchId, mentionedMemberIds) } : rest
+    );
     const updated = await this.repo().findOne({ where: { id, churchId, memberId } });
     return updated!;
   }
@@ -104,6 +144,15 @@ export class CareNoteService {
   private async assertType(churchId: number, typeId: number): Promise<void> {
     const type = await DataSources.instance.getRepository(CareNoteTypeEntity).findOne({ where: { id: typeId, churchId } });
     if (!type) throw new NotFoundException('양육기록 종류를 찾을 수 없습니다.');
+  }
+
+  /** 같은 교회에 있는 교인만, 중복 없이. 다른 교회 id 를 끼워 넣어도 저장되지 않는다. */
+  private async validMentions(churchId: number, ids?: number[]): Promise<number[]> {
+    const unique = Array.from(new Set(ids ?? []));
+    if (unique.length === 0) return [];
+    const found = await DataSources.instance.getRepository(MemberEntity).find({ where: { churchId, id: In(unique) } });
+    const valid = new Set(found.map(member => member.id));
+    return unique.filter(id => valid.has(id));
   }
 
   private async assertMember(churchId: number, memberId: number): Promise<void> {
