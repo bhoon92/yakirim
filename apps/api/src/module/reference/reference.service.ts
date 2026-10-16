@@ -32,7 +32,7 @@ export class ReferenceService {
     return DataSources.instance.getRepository(entity);
   }
 
-  // year 를 넘기면 연도별 reference(부서·사역팀·목장), 안 넘기면 연도 무관 reference(직분·예배 등).
+  // year 를 넘기면 연도별 reference(부서·사역팀·공동체·테이블), 안 넘기면 연도 무관 reference(직분·예배 등).
   list<T extends RefRow>(entity: EntityClass<T>, churchId: number, year?: number): Promise<T[]> {
     return this.repo(entity).find({
       where: (year != null ? { churchId, year } : { churchId }) as never,

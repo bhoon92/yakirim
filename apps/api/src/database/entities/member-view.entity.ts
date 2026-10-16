@@ -5,7 +5,7 @@ import { BaseDateEntityWithDeletedAt } from './base-date.entity';
 export type MemberViewFilters = {
   q?: string;
   statusId?: number;
-  affiliationKind?: 'department' | 'ministry' | 'smallGroup';
+  affiliationKind?: 'department' | 'ministry' | 'smallGroup' | 'table';
   affiliationId?: number;
   stalled?: boolean;
   /** 담당 간사 resident id, 또는 'none' = 담당 없음 */

@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Settings2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Printer, Settings2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { fetchRoster, markAttendance, type RosterItem } from '@/api/attendance';
+import { exportAttendanceSheet } from '@/api/exports';
 import { listReferences, type Reference } from '@/api/references';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -48,12 +49,26 @@ export function AttendancePage() {
         title="출석 체크"
         description="예배별 출석을 기록하고 출석률을 확인합니다."
         actions={
-          can('settings:write') && (
-            <Button variant="outline" onClick={() => setManaging(true)}>
-              <Settings2 />
-              예배 관리
-            </Button>
-          )
+          <>
+            {/* 종이로 출석을 보시는 분께 — 고른 날짜의 달 · 고른 예배로 주일 칸이 있는 양식을 내려준다 */}
+            {services.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => void exportAttendanceSheet(date.slice(0, 7), activeServiceId ?? undefined)}
+                aria-label="출석부 출력"
+                title={`${Number(date.slice(5, 7))}월 출석부 엑셀 (인쇄용)`}
+              >
+                <Printer />
+                <span className="hidden sm:inline">출석부 출력</span>
+              </Button>
+            )}
+            {can('settings:write') && (
+              <Button variant="outline" onClick={() => setManaging(true)}>
+                <Settings2 />
+                예배 관리
+              </Button>
+            )}
+          </>
         }
       />
 

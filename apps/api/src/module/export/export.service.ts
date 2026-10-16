@@ -1,9 +1,12 @@
-import { Injectable } from '@nestjs/common';
-import { Workbook, Worksheet } from 'exceljs';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Borders, Workbook, Worksheet } from 'exceljs';
 import { DataSources } from '@src/database/data-sources';
+import { ChurchEntity } from '@src/database/entities/church.entity';
 import { MemberStatusEntity } from '@src/database/entities/member-status.entity';
 import { TrainingCourseEntity } from '@src/database/entities/training-course.entity';
+import { WorshipServiceEntity } from '@src/database/entities/worship-service.entity';
 import { EnrollmentStatus } from '@src/database/entities/training-enrollment.entity';
+import { AffiliationService } from '@src/module/affiliation/affiliation.service';
 import { BudgetService } from '@src/module/finance/budget.service';
 import { OfferingService } from '@src/module/finance/offering.service';
 import { TransactionService } from '@src/module/finance/transaction.service';
@@ -11,7 +14,7 @@ import { MemberService } from '@src/module/member/member.service';
 import { MissionaryService } from '@src/module/missionary/missionary.service';
 import { ResidentService } from '@src/module/resident/resident.service';
 
-const KIND_LABEL: Record<string, string> = { department: '부서', ministry: '사역팀', small_group: '목장' };
+const KIND_LABEL: Record<string, string> = { department: '부서', ministry: '사역팀', small_group: '공동체' };
 
 /** 웹 ENROLLMENT_STATUS_LABEL 과 같은 말. */
 const ENROLLMENT_LABEL: Record<EnrollmentStatus, string> = {
@@ -19,6 +22,26 @@ const ENROLLMENT_LABEL: Record<EnrollmentStatus, string> = {
   [EnrollmentStatus.COMPLETED]: '수료',
   [EnrollmentStatus.DROPPED]: '중도포기',
 };
+
+/** 출석부 맨 아래에 남겨 두는 빈 줄 — 그날 처음 온 분 이름을 손으로 적는 칸. */
+const ATTENDANCE_SHEET_BLANK_ROWS = 8;
+
+const THIN_BORDER: Partial<Borders> = {
+  top: { style: 'thin' },
+  left: { style: 'thin' },
+  bottom: { style: 'thin' },
+  right: { style: 'thin' },
+};
+
+/** 그 달(YYYY-MM)의 주일 날짜들 (YYYY-MM-DD). UTC 로 계산해 서버 시간대와 무관하다. */
+export function sundaysOf(month: string): string[] {
+  const [year, monthIndex] = [Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1];
+  const result: string[] = [];
+  for (let day = new Date(Date.UTC(year, monthIndex, 1)); day.getUTCMonth() === monthIndex; day.setUTCDate(day.getUTCDate() + 1)) {
+    if (day.getUTCDay() === 0) result.push(day.toISOString().slice(0, 10));
+  }
+  return result;
+}
 
 const names = (tags: { name: string | null }[]) =>
   tags
@@ -34,7 +57,8 @@ export class ExportService {
     private readonly budgets: BudgetService,
     private readonly members: MemberService,
     private readonly residents: ResidentService,
-    private readonly missionaries: MissionaryService
+    private readonly missionaries: MissionaryService,
+    private readonly affiliations: AffiliationService
   ) {}
 
   /** 헌금 내역 (연도 기준). */
@@ -149,6 +173,106 @@ export class ExportService {
         address: member.address ?? '',
       });
     }
+    return this.toBuffer(wb);
+  }
+
+  /**
+   * 종이 출석부 — 인쇄해서 손으로 체크하는 양식. 그 달 주일마다 빈 칸 하나.
+   * 출석 화면 명단과 같은 사람(재적상태 countsInRoster)만, 이름 가나다순. 맨 아래에 새로 온 분을 적을 빈 줄을 둔다.
+   * A4 가로 한 장 너비에 맞추고, 여러 장이 되면 머리글 줄을 매 장 반복한다.
+   */
+  async attendance_sheet_xlsx(churchId: number, month: string, worshipServiceId?: number): Promise<Buffer> {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new BadRequestException('month 는 YYYY-MM 형식이어야 합니다');
+    const [church, service, members, statuses] = await Promise.all([
+      DataSources.instance.getRepository(ChurchEntity).findOne({ where: { id: churchId } }),
+      worshipServiceId
+        ? DataSources.instance.getRepository(WorshipServiceEntity).findOne({ where: { id: worshipServiceId, churchId } })
+        : Promise.resolve(null),
+      this.members.listAll(churchId),
+      DataSources.instance.getRepository(MemberStatusEntity).find({ where: { churchId } }),
+    ]);
+    if (worshipServiceId && !service) throw new NotFoundException('Worship service not found');
+    const statusMap = new Map(statuses.map(status => [status.id, status]));
+    const roster = members.filter(member => statusMap.get(member.statusId)?.countsInRoster !== false);
+    const affiliations = await this.affiliations.currentForMembers(
+      churchId,
+      roster.map(member => member.id)
+    );
+    const sundays = sundaysOf(month);
+
+    const wb = new Workbook();
+    const ws = wb.addWorksheet(`${month} 출석부`, {
+      pageSetup: {
+        paperSize: 9, // A4
+        orientation: 'landscape',
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0,
+        horizontalCentered: true,
+        margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+        printTitlesRow: '2:2',
+      },
+      headerFooter: { oddFooter: '&C&P / &N' },
+    });
+    ws.columns = [
+      { key: 'no', width: 6 },
+      { key: 'name', width: 14 },
+      { key: 'table', width: 14 },
+      { key: 'status', width: 10 },
+      ...sundays.map(date => ({ key: date, width: 9 })),
+      { key: 'note', width: 22 },
+    ];
+    const lastColumn = ws.columns.length;
+
+    const [year, monthNumber] = [month.slice(0, 4), Number(month.slice(5, 7))];
+    const title = `${church?.name ?? ''} 출석부 — ${year}년 ${monthNumber}월${service ? ` (${service.name})` : ''}`.trim();
+    ws.mergeCells(1, 1, 1, lastColumn);
+    const titleCell = ws.getCell(1, 1);
+    titleCell.value = title;
+    titleCell.font = { bold: true, size: 16 };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(1).height = 32;
+
+    const header = ws.addRow([
+      '번호',
+      '이름',
+      '테이블',
+      '재적상태',
+      ...sundays.map(date => `${Number(date.slice(5, 7))}/${Number(date.slice(8))}`),
+      '비고',
+    ]);
+    header.font = { bold: true };
+    header.height = 24;
+    header.eachCell(cell => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+
+    roster.forEach((member, index) => {
+      ws.addRow([
+        index + 1,
+        member.name,
+        names(affiliations.get(member.id)?.tables ?? []),
+        statusMap.get(member.statusId)?.name ?? '',
+        ...sundays.map(() => ''),
+        '',
+      ]);
+    });
+    for (let index = 0; index < ATTENDANCE_SHEET_BLANK_ROWS; index++) ws.addRow([roster.length + index + 1]);
+    const total = ws.addRow(['', '출석 인원', '', '', ...sundays.map(() => ''), '']);
+    total.font = { bold: true };
+
+    for (let rowNumber = 2; rowNumber <= ws.rowCount; rowNumber++) {
+      const row = ws.getRow(rowNumber);
+      if (rowNumber > 2) row.height = 24; // 손으로 체크하기 넉넉하게
+      for (let column = 1; column <= lastColumn; column++) {
+        const cell = row.getCell(column);
+        cell.border = THIN_BORDER;
+        if (rowNumber > 2)
+          cell.alignment = { vertical: 'middle', horizontal: column === 1 || (column > 4 && column < lastColumn) ? 'center' : 'left' };
+      }
+    }
+    ws.views = [{ state: 'frozen', ySplit: 2, xSplit: 2 }];
     return this.toBuffer(wb);
   }
 

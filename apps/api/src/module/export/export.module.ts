@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AffiliationModule } from '@src/module/affiliation/affiliation.module';
 import { AuthModule } from '@src/module/auth/auth.module';
 import { FinanceModule } from '@src/module/finance/finance.module';
 import { MemberModule } from '@src/module/member/member.module';
@@ -8,7 +9,7 @@ import { ExportController } from './export.controller';
 import { ExportService } from './export.service';
 
 @Module({
-  imports: [AuthModule, FinanceModule, MemberModule, ResidentModule, MissionaryModule],
+  imports: [AuthModule, AffiliationModule, FinanceModule, MemberModule, ResidentModule, MissionaryModule],
   controllers: [ExportController],
   providers: [ExportService],
 })

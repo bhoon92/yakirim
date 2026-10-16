@@ -22,7 +22,7 @@ export class BudgetController {
   @ApiOperation({
     summary: '예산 배정 목록 (집행률 포함)',
     description: [
-      '배정액(allocated)과 실제 지출(used), 집행률을 함께 계산해 반환한다. 대상(부서/사역팀/목장) 이름도 붙여준다.',
+      '배정액(allocated)과 실제 지출(used), 집행률을 함께 계산해 반환한다. 대상(부서/사역팀/공동체) 이름도 붙여준다.',
       '',
       '`used` 는 해당 예산에 연결된(`budgetAllocationId`) 지출 거래의 합계다.',
     ].join('\n'),
@@ -39,7 +39,7 @@ export class BudgetController {
     description: [
       '회계연도 × 대상 조직에 금액을 배정한다.',
       '',
-      '- `targetKind`: 배정 대상 종류(부서/사역팀/목장), `targetId`: 그 조직의 id',
+      '- `targetKind`: 배정 대상 종류(부서/사역팀/공동체), `targetId`: 그 조직의 id',
       '- 존재하지 않는 회계연도·대상이면 404',
     ].join('\n'),
   })

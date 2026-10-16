@@ -23,6 +23,8 @@ export type Member = {
   departments: MemberAffiliationTag[];
   ministries: MemberAffiliationTag[];
   smallGroups: MemberAffiliationTag[];
+  /** 테이블(예배 후 나눔). 공동체(하우스)와 별개 */
+  tables: MemberAffiliationTag[];
   /** 지금 담당 간사. 없으면 null */
   shepherd: { residentId: number; name: string } | null;
 };
@@ -32,7 +34,7 @@ export type MemberTag = { id: number; name: string | null };
 export type MemberAffiliationTag = MemberTag & { isLeader: boolean };
 
 /** 목록 전용 필드를 뺀 교인 한 건 — 생성 응답은 태그를 담지 않는다. */
-export type MemberRow = Omit<Member, 'position' | 'departments' | 'ministries' | 'smallGroups' | 'shepherd'>;
+export type MemberRow = Omit<Member, 'position' | 'departments' | 'ministries' | 'smallGroups' | 'tables' | 'shepherd'>;
 
 export type MemberStatusCount = { id: number; name: string; count: number };
 export type MemberCounts = { all: number; byStatus: MemberStatusCount[] };
@@ -45,7 +47,7 @@ export type ListMembersResponse = {
   counts: MemberCounts;
 };
 
-export type AffiliationKind = 'department' | 'ministry' | 'smallGroup';
+export type AffiliationKind = 'department' | 'ministry' | 'smallGroup' | 'table';
 
 export type ListMembersQuery = {
   q?: string;
@@ -137,11 +139,12 @@ export async function deleteMember(id: number): Promise<void> {
  * 상세는 목록과 모양이 다르다 — 소속을 `affiliations` 로 묶고 `position` 은 이력까지 담는다.
  * 그래서 목록 전용 필드를 빼고 다시 붙인다(그냥 & 하면 position 타입이 충돌한다).
  */
-export type MemberDetail = Omit<Member, 'position' | 'departments' | 'ministries' | 'smallGroups' | 'shepherd'> & {
+export type MemberDetail = Omit<Member, 'position' | 'departments' | 'ministries' | 'smallGroups' | 'tables' | 'shepherd'> & {
   affiliations: {
     departments: AffiliationSummary[];
     ministries: AffiliationSummary[];
     smallGroups: AffiliationSummary[];
+    tables: AffiliationSummary[];
   };
   position: {
     current: PositionHistoryEntry | null;

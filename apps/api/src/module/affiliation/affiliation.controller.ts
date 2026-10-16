@@ -14,8 +14,8 @@ import { SetLeaderDto } from './dto/set-leader.dto';
 type Auth = AuthContext & { churchId: number };
 
 /**
- * 부서/사역팀/목장 세 종류가 완전히 같은 3종 세트(배정·리더·종료)를 이룬다.
- * 세 리소스의 동작 설명이 동일하므로 Swagger 설명도 아래 상수를 공유한다.
+ * 부서/사역팀/공동체/테이블 네 종류가 완전히 같은 3종 세트(배정·리더·종료)를 이룬다.
+ * 네 리소스의 동작 설명이 동일하므로 Swagger 설명도 아래 상수를 공유한다.
  */
 const ASSIGN_DESCRIPTION = [
   '교인을 해당 조직에 배정한다. `referenceId` 는 기준정보(reference)의 id.',
@@ -28,7 +28,7 @@ const ASSIGN_DESCRIPTION = [
 const LEADER_DESCRIPTION = '활성 소속의 리더 여부와 호칭(roleLabel)을 변경한다. 조직도에서 이 값으로 리더 줄과 직함이 그려진다.';
 const END_DESCRIPTION = '소속을 **종료**한다. row 를 지우지 않고 endDate 를 오늘로 채워 이력을 남긴다. 활성 소속이 없으면 404.';
 const MEMBER_ID_PARAM = { name: 'memberId', description: '교인 id', type: Number } as const;
-const REFERENCE_ID_PARAM = { name: 'referenceId', description: '기준정보(부서/사역팀/목장) id', type: Number } as const;
+const REFERENCE_ID_PARAM = { name: 'referenceId', description: '기준정보(부서/사역팀/공동체/테이블) id', type: Number } as const;
 
 @ApiTags(SwaggerTag.AFFILIATION)
 @ApiAuth()
@@ -112,7 +112,7 @@ export class AffiliationController {
 
   @Post('small-groups')
   @Permissions('member:write')
-  @ApiOperation({ summary: '목장 배정', description: ASSIGN_DESCRIPTION })
+  @ApiOperation({ summary: '공동체(하우스) 배정', description: ASSIGN_DESCRIPTION })
   @ApiConflictResponse({ description: '이미 활성 소속이 있음' })
   assignSmallGroup(@RequireChurch() auth: Auth, @Param('memberId', ParseIntPipe) memberId: number, @Body() dto: AssignAffiliationDto) {
     return this.affiliationService.assign('smallGroup', auth.churchId, memberId, dto);
@@ -120,7 +120,7 @@ export class AffiliationController {
 
   @Patch('small-groups/:referenceId/leader')
   @Permissions('member:write')
-  @ApiOperation({ summary: '목장 리더(목자) 지정/해제', description: LEADER_DESCRIPTION })
+  @ApiOperation({ summary: '공동체(하우스) 리더 지정/해제', description: LEADER_DESCRIPTION })
   @ApiParam(REFERENCE_ID_PARAM)
   leaderSmallGroup(
     @RequireChurch() auth: Auth,
@@ -134,7 +134,7 @@ export class AffiliationController {
   @Delete('small-groups/:referenceId')
   @Permissions('member:write')
   @HttpCode(204)
-  @ApiOperation({ summary: '목장 소속 종료', description: END_DESCRIPTION })
+  @ApiOperation({ summary: '공동체(하우스) 소속 종료', description: END_DESCRIPTION })
   @ApiParam(REFERENCE_ID_PARAM)
   @ApiNoContentResponse({ description: '종료 완료' })
   @ApiNotFoundResponse({ description: '활성 소속 없음' })
@@ -144,5 +144,41 @@ export class AffiliationController {
     @Param('referenceId', ParseIntPipe) referenceId: number
   ) {
     return this.affiliationService.end('smallGroup', auth.churchId, memberId, referenceId);
+  }
+
+  @Post('tables')
+  @Permissions('member:write')
+  @ApiOperation({ summary: '테이블 배정', description: ASSIGN_DESCRIPTION })
+  @ApiConflictResponse({ description: '이미 활성 소속이 있음' })
+  assignTable(@RequireChurch() auth: Auth, @Param('memberId', ParseIntPipe) memberId: number, @Body() dto: AssignAffiliationDto) {
+    return this.affiliationService.assign('table', auth.churchId, memberId, dto);
+  }
+
+  @Patch('tables/:referenceId/leader')
+  @Permissions('member:write')
+  @ApiOperation({ summary: '테이블 리더 지정/해제', description: LEADER_DESCRIPTION })
+  @ApiParam(REFERENCE_ID_PARAM)
+  leaderTable(
+    @RequireChurch() auth: Auth,
+    @Param('memberId', ParseIntPipe) memberId: number,
+    @Param('referenceId', ParseIntPipe) referenceId: number,
+    @Body() dto: SetLeaderDto
+  ) {
+    return this.affiliationService.setLeader('table', auth.churchId, memberId, referenceId, dto.isLeader, dto.roleLabel);
+  }
+
+  @Delete('tables/:referenceId')
+  @Permissions('member:write')
+  @HttpCode(204)
+  @ApiOperation({ summary: '테이블 소속 종료', description: END_DESCRIPTION })
+  @ApiParam(REFERENCE_ID_PARAM)
+  @ApiNoContentResponse({ description: '종료 완료' })
+  @ApiNotFoundResponse({ description: '활성 소속 없음' })
+  endTable(
+    @RequireChurch() auth: Auth,
+    @Param('memberId', ParseIntPipe) memberId: number,
+    @Param('referenceId', ParseIntPipe) referenceId: number
+  ) {
+    return this.affiliationService.end('table', auth.churchId, memberId, referenceId);
   }
 }
