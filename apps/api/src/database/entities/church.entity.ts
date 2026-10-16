@@ -42,9 +42,9 @@ export class ChurchEntity extends BaseDateEntityWithDeletedAt {
   status!: ChurchStatus;
 
   /**
-   * 조직 대분류를 이 교회에서 부르는 이름. null 이면 코드 기본값(기관/사역팀/공동체)을 쓴다.
+   * 조직 대분류를 이 교회에서 부르는 이름. null 이면 코드 기본값(기관/사역팀/공동체/테이블)을 쓴다.
    *
-   * 대분류 자체는 3종 고정이다 — 각각 테이블·소속 이력·예산 배정 대상이 따로 있어서
+   * 대분류 자체는 4종 고정이다 — 각각 테이블·소속 이력·예산 배정 대상이 따로 있어서
    * 개수를 바꾸려면 스키마를 갈아야 한다. 반면 "뭐라고 부르는가"는 교회마다 다르므로
    * (부서/구역/목장/셀…) 표시 이름만 교회별로 저장한다.
    */
@@ -56,4 +56,8 @@ export class ChurchEntity extends BaseDateEntityWithDeletedAt {
 
   @Column({ comment: '공동체 대분류의 교회별 표시 이름', type: 'varchar', nullable: true })
   smallGroupLabel?: string | null;
+
+  /** 테이블(예배 후 나눔 자리)은 키퍼스처치 요청으로 나중에 더한 네 번째 대분류다 — 다른 교회의 셀·목장 모임 자리. */
+  @Column({ comment: '테이블 대분류의 교회별 표시 이름', type: 'varchar', nullable: true })
+  tableLabel?: string | null;
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '@src/module/auth/auth.module';
 import { AccountCategoryController } from './account-category.controller';
 import { DepartmentController } from './department.controller';
+import { FellowshipTableController } from './fellowship-table.controller';
 import { MinistryController } from './ministry.controller';
 import { OfferingCategoryController } from './offering-category.controller';
 import { CareNoteTypeController } from './care-note-type.controller';
@@ -16,6 +17,7 @@ import { WorshipServiceController } from './worship-service.controller';
     DepartmentController,
     MinistryController,
     SmallGroupController,
+    FellowshipTableController,
     PositionController,
     CareNoteTypeController,
     WorshipServiceController,

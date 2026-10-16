@@ -4,6 +4,8 @@ import { DataSources } from '@src/database/data-sources';
 import { DepartmentEntity } from '@src/database/entities/department.entity';
 import { MemberDepartmentEntity } from '@src/database/entities/member-department.entity';
 import { MemberMinistryEntity } from '@src/database/entities/member-ministry.entity';
+import { FellowshipTableEntity } from '@src/database/entities/fellowship-table.entity';
+import { MemberFellowshipTableEntity } from '@src/database/entities/member-fellowship-table.entity';
 import { MemberSmallGroupEntity } from '@src/database/entities/member-small-group.entity';
 import { MemberEntity } from '@src/database/entities/member.entity';
 import { MemberPositionEntity } from '@src/database/entities/member-position.entity';
@@ -14,10 +16,10 @@ import { SmallGroupEntity } from '@src/database/entities/small-group.entity';
 
 /**
  * 조직도 (planning 3) — 별도 트리 데이터를 두지 않고 재적의 활성 소속 조인에서 derive.
- * 단위(부서/사역팀/목장) 마다 리더(isLeader)와 일반 구성원을 분리해 반환.
+ * 단위(부서/사역팀/공동체/테이블) 마다 리더(isLeader)와 일반 구성원을 분리해 반환.
  * 읽기 전용: 편집은 재적 상세의 소속/리더 관리(AffiliationModule)에서 수행.
  */
-export type OrganizationKind = 'department' | 'ministry' | 'smallGroup';
+export type OrganizationKind = 'department' | 'ministry' | 'smallGroup' | 'table';
 
 type JoinRow = ObjectLiteral & {
   memberId: number;
@@ -40,6 +42,7 @@ const CONFIG: Record<OrganizationKind, Config> = {
   department: { joinEntity: MemberDepartmentEntity, referenceEntity: DepartmentEntity, referenceKey: 'departmentId' },
   ministry: { joinEntity: MemberMinistryEntity, referenceEntity: MinistryEntity, referenceKey: 'ministryId' },
   smallGroup: { joinEntity: MemberSmallGroupEntity, referenceEntity: SmallGroupEntity, referenceKey: 'smallGroupId' },
+  table: { joinEntity: MemberFellowshipTableEntity, referenceEntity: FellowshipTableEntity, referenceKey: 'tableId' },
 };
 
 export type OrganizationPerson = {
@@ -68,12 +71,13 @@ export type OrganizationUnit = {
 export class OrganizationChartService {
   async tree(churchId: number, year: number): Promise<Record<OrganizationKind, OrganizationUnit[]>> {
     const meta = await this.memberMeta(churchId);
-    const [department, ministry, smallGroup] = await Promise.all([
+    const [department, ministry, smallGroup, table] = await Promise.all([
       this.section('department', churchId, year, meta),
       this.section('ministry', churchId, year, meta),
       this.section('smallGroup', churchId, year, meta),
+      this.section('table', churchId, year, meta),
     ]);
-    return { department, ministry, smallGroup };
+    return { department, ministry, smallGroup, table };
   }
 
   /** 교회 전체의 현재 사역 역할·재적상태를 한 번에 모아 map 으로. */

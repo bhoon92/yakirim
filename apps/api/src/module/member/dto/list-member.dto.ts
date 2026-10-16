@@ -2,7 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import type { AffiliationKind } from '@src/module/affiliation/affiliation.service';
 
-const AFFILIATION_KINDS = ['department', 'ministry', 'smallGroup'] as const;
+const AFFILIATION_KINDS = ['department', 'ministry', 'smallGroup', 'table'] as const;
 
 export class ListMemberQueryDto {
   /** 이름·전화 부분 일치 */
@@ -10,7 +10,7 @@ export class ListMemberQueryDto {
   @IsString()
   q?: string;
 
-  /** 소속 검색: 부서/사역팀/목장 종류 */
+  /** 소속 검색: 부서/사역팀/공동체/테이블 종류 */
   @IsOptional()
   @IsIn(AFFILIATION_KINDS)
   affiliationKind?: AffiliationKind;

@@ -23,7 +23,7 @@ import {
 } from './reference-swagger';
 import { ReferenceService } from './reference.service';
 
-const WHAT = '목장(소그룹)';
+const WHAT = '공동체(간사 하우스)';
 
 @ApiTags(SwaggerTag.REFERENCE)
 @ApiAuth()
@@ -33,7 +33,7 @@ export class SmallGroupController {
   constructor(private readonly referenceService: ReferenceService) {}
 
   @Get()
-  @ApiOperation({ summary: '목장 목록 (연도별)', description: listDescription(WHAT, true) })
+  @ApiOperation({ summary: '공동체 목록 (연도별)', description: listDescription(WHAT, true) })
   @ApiYearQuery()
   list(@RequireChurch() auth: AuthContext & { churchId: number }, @Query('year', ParseIntPipe) year: number) {
     return this.referenceService.list(SmallGroupEntity, auth.churchId, year);
@@ -41,7 +41,7 @@ export class SmallGroupController {
 
   @Post()
   @Permissions('settings:write')
-  @ApiOperation({ summary: '목장 추가', description: createDescription(WHAT, true) })
+  @ApiOperation({ summary: '공동체 추가', description: createDescription(WHAT, true) })
   @ApiYearQuery()
   create(
     @RequireChurch() auth: AuthContext & { churchId: number },
@@ -53,7 +53,7 @@ export class SmallGroupController {
 
   @Post('copy')
   @Permissions('settings:write')
-  @ApiOperation({ summary: '목장 구성 연도 복제', description: copyDescription(WHAT) })
+  @ApiOperation({ summary: '공동체 구성 연도 복제', description: copyDescription(WHAT) })
   @ApiCopyYearQueries()
   copy(
     @RequireChurch() auth: AuthContext & { churchId: number },
@@ -65,7 +65,7 @@ export class SmallGroupController {
 
   @Patch(':id')
   @Permissions('settings:write')
-  @ApiOperation({ summary: '목장 수정', description: updateDescription(WHAT) })
+  @ApiOperation({ summary: '공동체 수정', description: updateDescription(WHAT) })
   update(
     @RequireChurch() auth: AuthContext & { churchId: number },
     @Param('id', ParseIntPipe) id: number,
@@ -77,7 +77,7 @@ export class SmallGroupController {
   @Delete(':id')
   @Permissions('settings:write')
   @HttpCode(204)
-  @ApiOperation({ summary: '목장 삭제', description: removeDescription(WHAT) })
+  @ApiOperation({ summary: '공동체 삭제', description: removeDescription(WHAT) })
   @ApiNoContentResponse({ description: '삭제 완료' })
   remove(@RequireChurch() auth: AuthContext & { churchId: number }, @Param('id', ParseIntPipe) id: number) {
     return this.referenceService.remove(SmallGroupEntity, auth.churchId, id, [

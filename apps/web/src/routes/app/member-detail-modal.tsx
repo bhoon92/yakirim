@@ -20,7 +20,7 @@ import { MemberJourneySection } from './member-journey-section';
 import { ReceiptSection } from './receipt-section';
 import { isSubmitEnter } from '@/lib/keyboard';
 
-const KINDS: AffiliationKind[] = ['department', 'ministry', 'smallGroup'];
+const KINDS: AffiliationKind[] = ['department', 'ministry', 'smallGroup', 'table'];
 
 export function MemberDetailModal({ memberId, onClose }: { memberId: number; onClose: () => void }) {
   const { data: member, isLoading } = useQuery({
@@ -299,6 +299,7 @@ function affiliationsByKind(
     departments: AffiliationSummary[];
     ministries: AffiliationSummary[];
     smallGroups: AffiliationSummary[];
+    tables: AffiliationSummary[];
   },
   kind: AffiliationKind
 ): AffiliationSummary[] {
@@ -309,11 +310,13 @@ function affiliationsByKind(
       return affiliations.ministries;
     case 'smallGroup':
       return affiliations.smallGroups;
+    case 'table':
+      return affiliations.tables;
   }
 }
 
 /**
- * 소속 — 기관·사역팀·공동체를 한 칸에.
+ * 소속 — 기관·사역팀·공동체·테이블을 한 칸에.
  * 예전에는 종류마다 칸을 따로 둬서 소속이 없는 대부분의 교인에게 "소속 없음"이 세 번 떴고,
  * 폰에서는 그 아래 양육기록(간사가 가장 자주 쓰는 곳)이 스크롤 밖으로 밀렸다.
  * 있는 종류만 한 줄씩 보여주고, 추가할 때 종류를 고른다.
@@ -323,7 +326,12 @@ function AffiliationsSection({
   affiliations,
 }: {
   memberId: number;
-  affiliations: { departments: AffiliationSummary[]; ministries: AffiliationSummary[]; smallGroups: AffiliationSummary[] };
+  affiliations: {
+    departments: AffiliationSummary[];
+    ministries: AffiliationSummary[];
+    smallGroups: AffiliationSummary[];
+    tables: AffiliationSummary[];
+  };
 }) {
   const orgLabels = useOrgLabels();
   const queryClient = useQueryClient();

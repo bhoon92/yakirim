@@ -495,6 +495,8 @@ function exampleFor(kind: ReferenceKind): string {
       return '예배팀 / 미디어팀 / 해외선교팀';
     case 'smallGroup':
       return '1하우스 / 2하우스';
+    case 'table':
+      return '1테이블 / 2테이블 / 청년 테이블';
     case 'position':
       return '목사 / 전도사 / 간사 / 팀장';
     case 'worshipService':

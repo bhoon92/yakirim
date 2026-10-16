@@ -13,8 +13,8 @@ export class MemberViewFiltersDto {
   statusId?: number;
 
   @IsOptional()
-  @IsIn(['department', 'ministry', 'smallGroup'])
-  affiliationKind?: 'department' | 'ministry' | 'smallGroup';
+  @IsIn(['department', 'ministry', 'smallGroup', 'table'])
+  affiliationKind?: 'department' | 'ministry' | 'smallGroup' | 'table';
 
   @IsOptional()
   @IsInt()
