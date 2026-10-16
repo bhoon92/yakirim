@@ -47,11 +47,6 @@ export class CreateCourseDto {
   @Min(1)
   completionStatusId?: number | null;
 
-  /** 수료 시 공동체 간사 등록을 제안할지. */
-  @IsOptional()
-  @IsBoolean()
-  completionSuggestsResident?: boolean;
-
   /** 직접 고른 아이콘(이모지 한 개). null 을 보내면 이름으로 자동 배정으로 되돌린다. */
   @IsOptional()
   @IsString()

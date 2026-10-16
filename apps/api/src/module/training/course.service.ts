@@ -56,7 +56,6 @@ export class TrainingCourseService {
         isActive: dto.isActive ?? true,
         step: dto.step ?? null,
         completionStatusId: dto.completionStatusId ?? null,
-        completionSuggestsResident: dto.completionSuggestsResident ?? false,
       })
     );
   }

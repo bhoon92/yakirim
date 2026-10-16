@@ -118,7 +118,8 @@ const RESIDENT_STATUSES: { name: string; countsAsActive: boolean }[] = [
 
 /**
  * 훈련 과정 — 공식 사이트(kodministry.com/training)의 STEP 1~4.
- * STEP 5 "다윗의열쇠 선교사(종신 헌신)"는 과정이 아니라 도착점이라 간사·선교사 트랙이 맡는다.
+ * STEP 5 "다윗의열쇠 선교사(종신 헌신)"는 과정이 아니라 도착점이라 선교사 트랙이 맡는다.
+ * 공동체 간사는 이 사다리의 끝이 아니다 — 진입 경로(지원·면담·과정·헌신)가 따로라 수료로 제안하지 않는다.
  * `completionStatus` 는 수료 시 올리기를 제안할 재적상태 **이름**이다 — 위 MEMBER_STATUSES 에서 찾아 id 로 바꾼다.
  * 회차 수는 기수 개설 시 기본값으로 쓰인다. 합숙 과정은 기간이 길어 회차 1개로 두고 교회가 나눠 쓴다.
  */
@@ -129,7 +130,6 @@ const TRAINING_COURSES: {
   description: string;
   step: number;
   completionStatus?: string;
-  completionSuggestsResident?: boolean;
 }[] = [
   {
     name: '믿음으로 길을 걷다',
@@ -161,7 +161,6 @@ const TRAINING_COURSES: {
     defaultSessionCount: 1,
     description: '6개월 인턴십. 선교사와 함께 생활하며 배운다.',
     step: 4,
-    completionSuggestsResident: true,
   },
 ];
 
@@ -224,7 +223,6 @@ export async function seedChurchReferences(manager: EntityManager, churchId: num
         churchId,
         ...course,
         completionStatusId: completionStatus ? (statusIdByName.get(completionStatus) ?? null) : null,
-        completionSuggestsResident: course.completionSuggestsResident ?? false,
         sortOrder: index,
       })
     )

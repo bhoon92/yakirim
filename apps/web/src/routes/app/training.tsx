@@ -175,7 +175,7 @@ function PendingPromotions({ onOpen }: { onOpen: (cohortId: number) => void }) {
         <p className="text-sm font-semibold">수료 후 처리하지 않은 제안</p>
         <div className="flex flex-wrap gap-1.5">
           {data.map(row => {
-            const count = new Set([...row.candidates, ...row.residentCandidates].map(person => person.memberId)).size;
+            const count = new Set(row.candidates.map(person => person.memberId)).size;
             return (
               <button
                 key={row.cohortId}

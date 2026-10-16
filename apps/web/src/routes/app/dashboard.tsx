@@ -353,7 +353,7 @@ function PendingPromotionCard() {
   const { data = [], isLoading } = useQuery({ queryKey: ['training', 'promotions', 'pending'], queryFn: fetchPendingPromotions });
   // 제안 설정을 안 한 교회에는 늘 비어 있으니 카드 자체를 숨긴다
   if (isLoading || data.length === 0) return null;
-  const people = new Set(data.flatMap(row => [...row.candidates, ...row.residentCandidates].map(person => person.memberId)));
+  const people = new Set(data.flatMap(row => row.candidates.map(person => person.memberId)));
 
   return (
     <SectionCard title="수료 후 다음 단계" hint={`${people.size}명`} actionLabel="훈련으로" actionTo="/app/training">
@@ -367,10 +367,7 @@ function PendingPromotionCard() {
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">{row.label}</div>
                 <div className="mt-0.5 truncate text-xs text-[var(--color-muted-foreground)]">
-                  {[
-                    row.target && row.candidates.length > 0 ? `“${row.target.name}”(으)로 올릴 ${row.candidates.length}명` : null,
-                    row.residentCandidates.length > 0 ? `간사 등록 제안 ${row.residentCandidates.length}명` : null,
-                  ]
+                  {[row.target && row.candidates.length > 0 ? `“${row.target.name}”(으)로 올릴 ${row.candidates.length}명` : null]
                     .filter(Boolean)
                     .join(' · ')}
                 </div>
