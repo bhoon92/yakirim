@@ -1,5 +1,7 @@
 import { Workbook } from 'exceljs';
 import { DataSource } from 'typeorm';
+import { ChurchEntity } from '@src/database/entities/church.entity';
+import { FellowshipTableEntity } from '@src/database/entities/fellowship-table.entity';
 import { MemberStatusEntity } from '@src/database/entities/member-status.entity';
 import { MemberEntity } from '@src/database/entities/member.entity';
 import { MissionaryStageEntity } from '@src/database/entities/missionary-stage.entity';
@@ -17,7 +19,7 @@ import { ResidentDutyService } from '@src/module/resident/resident-duty.service'
 import { ResidentService } from '@src/module/resident/resident.service';
 import { ShepherdService } from '@src/module/shepherd/shepherd.service';
 import { newChurch, setupTestDb } from '@src/test-support/test-db';
-import { ExportService } from './export.service';
+import { ExportService, sundaysOf } from './export.service';
 
 /** xlsx 버퍼 → [머리글, ...행] (셀 값 그대로). */
 async function readSheet(buffer: Buffer): Promise<unknown[][]> {
@@ -28,7 +30,7 @@ async function readSheet(buffer: Buffer): Promise<unknown[][]> {
   return rows;
 }
 
-describe('ExportService — 간사·선교사 명부 (실제 Postgres)', () => {
+describe('ExportService — 간사·선교사 명부·출석부 (실제 Postgres)', () => {
   let dataSource: DataSource;
   const history = new MemberStatusHistoryService();
   const transactions = new TransactionService();
@@ -41,7 +43,15 @@ describe('ExportService — 간사·선교사 명부 (실제 Postgres)', () => {
     new ShepherdService()
   );
   const missionaries = new MissionaryService(history);
-  const exports = new ExportService(new OfferingService(), transactions, new BudgetService(transactions), members, residents, missionaries);
+  const exports = new ExportService(
+    new OfferingService(),
+    transactions,
+    new BudgetService(transactions),
+    members,
+    residents,
+    missionaries,
+    new AffiliationService()
+  );
 
   beforeAll(async () => {
     dataSource = await setupTestDb();
@@ -97,5 +107,46 @@ describe('ExportService — 간사·선교사 명부 (실제 Postgres)', () => {
         ['최후보', '단계 미지정', '아니오', '', ''],
       ]
     );
+  });
+
+  it('출석부: 그 달 주일마다 칸, 출석 명단 대상만 이름순, 맨 아래 빈 줄과 출석 인원 줄', async () => {
+    const churchId = await newChurch(dataSource);
+    await dataSource.getRepository(ChurchEntity).update(churchId, { name: '테스트교회' });
+    const statuses = dataSource.getRepository(MemberStatusEntity);
+    const settled = await statuses.save(statuses.create({ churchId, name: '정착', sortOrder: 0 }));
+    const moved = await statuses.save(statuses.create({ churchId, name: '이명', sortOrder: 1, countsInRoster: false }));
+    const repo = dataSource.getRepository(MemberEntity);
+    const [ha] = await repo.save([
+      repo.create({ churchId, name: '하성도', statusId: settled.id }),
+      repo.create({ churchId, name: '가성도', statusId: settled.id }),
+      repo.create({ churchId, name: '나이명', statusId: moved.id }),
+    ]);
+    const tables = dataSource.getRepository(FellowshipTableEntity);
+    const table = await tables.save(tables.create({ churchId, year: 2026, name: '1테이블' }));
+    await new AffiliationService().assign('table', churchId, ha.id, { referenceId: table.id });
+
+    const rows = await readSheet(await exports.attendance_sheet_xlsx(churchId, '2026-11'));
+
+    expect(rows[0][0]).toBe('테스트교회 출석부 — 2026년 11월');
+    expect(rows[1]).toEqual(['번호', '이름', '테이블', '재적상태', '11/1', '11/8', '11/15', '11/22', '11/29', '비고']);
+    expect(rows.slice(2, 4).map(row => [row[0], row[1], row[2], row[3]])).toEqual([
+      [1, '가성도', '', '정착'],
+      [2, '하성도', '1테이블', '정착'],
+    ]);
+    expect(rows.flat()).not.toContain('나이명');
+    expect(rows.at(-1)?.[1]).toBe('출석 인원');
+    expect(rows.length).toBe(2 + 2 + 8 + 1);
+  });
+
+  it('출석부: 월 형식이 틀리면 거절한다', async () => {
+    const churchId = await newChurch(dataSource);
+    await expect(exports.attendance_sheet_xlsx(churchId, '2026-13')).rejects.toThrow('YYYY-MM');
+  });
+});
+
+describe('sundaysOf', () => {
+  it('그 달의 주일만, 월 경계를 넘지 않는다', () => {
+    expect(sundaysOf('2026-10')).toEqual(['2026-10-04', '2026-10-11', '2026-10-18', '2026-10-25']);
+    expect(sundaysOf('2026-02')).toEqual(['2026-02-01', '2026-02-08', '2026-02-15', '2026-02-22']);
   });
 });
