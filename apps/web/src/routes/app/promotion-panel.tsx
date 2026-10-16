@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Home, X } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { useState } from 'react';
 
-import { createResident, listResidentStatuses } from '@/api/residents';
 import { applyCohortPromotions, dismissCohortPromotions, fetchCohortPromotions } from '@/api/training';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/lib/permissions';
@@ -26,12 +25,6 @@ export function PromotionPanel({ cohortId }: { cohortId: number }) {
   // 체크를 해제한 사람만 기억한다 — 새 수료자는 기본으로 체크된 채 들어온다
   const [unchecked, setUnchecked] = useState<Set<number>>(new Set());
 
-  const { data: residentStatuses = [] } = useQuery({
-    queryKey: ['resident', 'statuses'],
-    queryFn: listResidentStatuses,
-    enabled: Boolean(data?.residentCandidates.length),
-  });
-
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['training', 'cohort', cohortId] });
     queryClient.invalidateQueries({ queryKey: ['members'] });
@@ -51,20 +44,6 @@ export function PromotionPanel({ cohortId }: { cohortId: number }) {
     onError: (error: Error) => window.alert(`단계 올리기 실패: ${error.message}`),
   });
 
-  const residentMut = useMutation({
-    mutationFn: (memberId: number) =>
-      createResident({
-        memberId,
-        // 첫 '공동체 집계' 상태(기본값 "활동")로 시작한다
-        statusId: residentStatuses.find(status => status.isActive && status.countsAsActive)?.id,
-      }),
-    onSuccess: () => {
-      invalidate();
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
-    },
-    onError: (error: Error) => window.alert(`간사 등록 실패: ${error.message}`),
-  });
-
   const dismissMut = useMutation({
     mutationFn: (memberIds: number[]) => dismissCohortPromotions(cohortId, memberIds),
     onSuccess: () => {
@@ -74,19 +53,16 @@ export function PromotionPanel({ cohortId }: { cohortId: number }) {
     onError: (error: Error) => window.alert(`넘기기 실패: ${error.message}`),
   });
 
-  // 넘기기는 그 사람의 이 기수 제안 전체(단계·간사)를 감춘다 — 수강 기록 하나에 표시가 하나라서
+  // 넘기기는 그 사람의 이 기수 제안을 감춘다 — 수강 기록 하나에 표시가 하나라서
   const dismiss = (memberIds: number[], names: string) => {
-    if (
-      window.confirm(`${names} — 이 기수의 수료 제안(단계 올리기·간사 등록)에서 뺄까요?\n수료를 취소했다가 다시 수료하면 다시 나타납니다.`)
-    ) {
+    if (window.confirm(`${names} — 이 기수의 수료 제안(단계 올리기)에서 뺄까요?\n수료를 취소했다가 다시 수료하면 다시 나타납니다.`)) {
       dismissMut.mutate(memberIds);
     }
   };
 
   if (!data) return null;
   const showPromote = can('member:write') && data.target && data.candidates.length > 0;
-  const showResident = can('resident:write') && data.residentCandidates.length > 0;
-  if (!showPromote && !showResident) return null;
+  if (!showPromote) return null;
 
   const selected = data.candidates.filter(candidate => !unchecked.has(candidate.memberId)).map(candidate => candidate.memberId);
   const toggle = (memberId: number) =>
@@ -150,41 +126,6 @@ export function PromotionPanel({ cohortId }: { cohortId: number }) {
                 단계 이력에 수료일과 “기수 수료” 사유가 남습니다. 올리지 않을 사람은 눌러서 제외한 뒤 넘기세요.
               </span>
             )}
-          </div>
-        </div>
-      )}
-
-      {showResident && (
-        <div className={cn('space-y-2', showPromote && 'border-t border-[#b9e5c0] pt-3')}>
-          <p className="flex items-center gap-1.5 text-sm font-semibold">
-            <Home className="size-4 text-[#058012]" />이 과정은 공동체 간사로 이어집니다
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {data.residentCandidates.map(candidate => (
-              <span
-                key={candidate.memberId}
-                className="inline-flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]"
-              >
-                <button
-                  disabled={residentMut.isPending}
-                  onClick={() => {
-                    if (window.confirm(`${candidate.memberName} 님을 공동체 간사로 등록할까요?`)) residentMut.mutate(candidate.memberId);
-                  }}
-                  className="px-2.5 py-1 text-xs font-medium hover:bg-[var(--color-muted)]"
-                >
-                  {candidate.memberName} 간사로 등록
-                </button>
-                <button
-                  disabled={dismissMut.isPending}
-                  onClick={() => dismiss([candidate.memberId], candidate.memberName)}
-                  className="border-l border-[var(--color-border)] px-1.5 py-1 text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
-                  aria-label={`${candidate.memberName} 넘기기`}
-                  title="넘기기"
-                >
-                  <X className="size-3" />
-                </button>
-              </span>
-            ))}
           </div>
         </div>
       )}

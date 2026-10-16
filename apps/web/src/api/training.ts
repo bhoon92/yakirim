@@ -53,8 +53,6 @@ export type TrainingCourse = {
   step: number | null;
   /** 수료 시 올리기를 제안할 재적상태 id. */
   completionStatusId: number | null;
-  /** 수료 시 공동체 간사 등록을 제안할지. */
-  completionSuggestsResident: boolean;
   /** 이 과정으로 열린 기수 수 — 있으면 지울 수 없고 숨기기만 된다. */
   cohortCount: number;
 };
@@ -66,7 +64,6 @@ export type CoursePatch = Partial<{
   isActive: boolean;
   step: number | null;
   completionStatusId: number | null;
-  completionSuggestsResident: boolean;
   icon: string | null;
 }>;
 
@@ -201,8 +198,6 @@ export const fetchMemberTrainingHistory = (memberId: number) => request<MemberTr
 export type CohortPromotions = {
   target: { id: number; name: string } | null;
   candidates: { memberId: number; memberName: string; statusId: number; statusName: string | null; completedAt: string | null }[];
-  suggestsResident: boolean;
-  residentCandidates: { memberId: number; memberName: string }[];
 };
 
 export const fetchCohortPromotions = (cohortId: number) => request<CohortPromotions>(`${BASE}/cohorts/${cohortId}/promotions`);

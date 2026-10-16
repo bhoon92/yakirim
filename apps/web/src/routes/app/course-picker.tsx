@@ -335,15 +335,6 @@ export function CourseOptionEditor({
             </option>
           ))}
         </select>
-        <label className="mt-1.5 flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
-            checked={course.completionSuggestsResident}
-            onChange={event => patchMut.mutate({ completionSuggestsResident: event.target.checked })}
-            className="size-4 accent-[var(--color-foreground)]"
-          />
-          공동체 간사 등록 제안
-        </label>
       </Field>
 
       <Field label="형식 · 기본 회차">
