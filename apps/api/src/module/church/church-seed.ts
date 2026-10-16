@@ -8,7 +8,7 @@ import { MissionaryStageEntity } from '@src/database/entities/missionary-stage.e
 import { OfferingCategoryEntity } from '@src/database/entities/offering-category.entity';
 import { CareNoteTypeEntity } from '@src/database/entities/care-note-type.entity';
 import { PositionEntity } from '@src/database/entities/position.entity';
-import { ResidentStatusEntity } from '@src/database/entities/resident-status.entity';
+import { ResidentPhase, ResidentStatusEntity } from '@src/database/entities/resident-status.entity';
 import { SmallGroupEntity } from '@src/database/entities/small-group.entity';
 import { TrainingCourseEntity, TrainingFormat } from '@src/database/entities/training-course.entity';
 import { WorshipServiceEntity } from '@src/database/entities/worship-service.entity';
@@ -107,13 +107,18 @@ const MISSIONARY_STAGES: { name: string; countsAsActive: boolean }[] = [
 ];
 
 /**
- * 간사 상태 기본값. 코드가 아는 건 `countsAsActive`(지금 공동체에 있는 사람으로 셀지) 하나뿐이다.
- * 안식 중인 간사도 공동체 식구라 집계에 넣는다.
+ * 간사 상태 기본값 — 노션 칸반의 status 처럼 교회가 이름·순서를 바꾼다. 코드가 아는 건 구간(phase)뿐이다.
+ * 성도와 간사는 2트랙이라 간사는 진입 구간(지원 → 면담 → 훈련·선교 과정)을 따로 거쳐 헌신·입주(활동)로 들어온다.
+ * 간사로 들어온다는 것 자체가 재정을 0으로 정리했다는 고백이라 재정 정리는 단계로 두지 않는다 (2026-10-16 사용자).
+ * 안식 중인 간사도 공동체 식구라 집계(resident)에 넣는다.
  */
-const RESIDENT_STATUSES: { name: string; countsAsActive: boolean }[] = [
-  { name: '활동', countsAsActive: true },
-  { name: '안식', countsAsActive: true },
-  { name: '퇴소', countsAsActive: false },
+const RESIDENT_STATUSES: { name: string; phase: ResidentPhase; description?: string }[] = [
+  { name: '지원', phase: ResidentPhase.PREPARING, description: '간사로 살겠다고 지원한 사람' },
+  { name: '면담', phase: ResidentPhase.PREPARING, description: '김선교 선교사님 등과 면담 중' },
+  { name: '훈련·선교 과정', phase: ResidentPhase.PREPARING, description: '훈련·선교 과정을 듣는 중' },
+  { name: '활동', phase: ResidentPhase.RESIDENT },
+  { name: '안식', phase: ResidentPhase.RESIDENT },
+  { name: '퇴소', phase: ResidentPhase.LEFT },
 ];
 
 /**
@@ -233,7 +238,9 @@ export async function seedChurchReferences(manager: EntityManager, churchId: num
 
   const residentStatusRepo = manager.getRepository(ResidentStatusEntity);
   await residentStatusRepo.save(
-    RESIDENT_STATUSES.map((status, index) => residentStatusRepo.create({ churchId, ...status, sortOrder: index }))
+    RESIDENT_STATUSES.map((status, index) =>
+      residentStatusRepo.create({ churchId, ...status, countsAsActive: status.phase === ResidentPhase.RESIDENT, sortOrder: index })
+    )
   );
 
   const calendarRepo = manager.getRepository(CalendarEntity);

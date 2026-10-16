@@ -1,6 +1,7 @@
+import { ResidentPhase } from '@src/database/entities/resident-status.entity';
 import { PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsOptional, IsString, Length, Matches, Min, ValidateNested } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Length, Matches, Min, ValidateNested } from 'class-validator';
 import { NewMemberDto } from '@src/module/missionary/dto/missionary.dto';
 
 const YYYY_MM_DD = /^\d{4}-\d{2}-\d{2}$/;
@@ -89,10 +90,15 @@ export class UpsertResidentStatusDto {
   @IsBoolean()
   isActive?: boolean;
 
-  /** 이 상태를 '지금 공동체에 있는 간사'로 집계할지. */
+  /** 이 상태를 '지금 공동체에 있는 간사'로 집계할지. phase 를 함께 보내면 phase 가 이긴다(예전 클라이언트 호환). */
   @IsOptional()
   @IsBoolean()
   countsAsActive?: boolean;
+
+  /** 구간 — preparing 진입 준비 / resident 간사 / left 떠남. */
+  @IsOptional()
+  @IsIn(Object.values(ResidentPhase))
+  phase?: ResidentPhase;
 }
 
 export class UpdateResidentStatusDto extends PartialType(UpsertResidentStatusDto) {}
