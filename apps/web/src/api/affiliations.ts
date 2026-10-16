@@ -1,7 +1,7 @@
 import { REFERENCE_PATH } from './references';
 
-/** Affiliation 은 부서/사역팀/목장만 — Position 은 별도 endpoint. */
-export type AffiliationKind = 'department' | 'ministry' | 'smallGroup';
+/** Affiliation 은 부서/사역팀/공동체/테이블만 — Position 은 별도 endpoint. */
+export type AffiliationKind = 'department' | 'ministry' | 'smallGroup' | 'table';
 
 export type Affiliation = {
   id: number;

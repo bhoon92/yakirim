@@ -51,7 +51,7 @@ export class ChurchService {
    */
   async updateOrganizationLabels(churchId: number, dto: UpdateOrganizationLabelsDto): Promise<ChurchEntity> {
     const patch: Partial<ChurchEntity> = {};
-    for (const key of ['departmentLabel', 'ministryLabel', 'smallGroupLabel'] as const) {
+    for (const key of ['departmentLabel', 'ministryLabel', 'smallGroupLabel', 'tableLabel'] as const) {
       if (dto[key] === undefined) continue;
       const value = dto[key];
       patch[key] = value === null || value.trim() === '' ? null : value.trim();

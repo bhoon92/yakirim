@@ -1,9 +1,18 @@
-export type ReferenceKind = 'department' | 'ministry' | 'smallGroup' | 'position' | 'worshipService' | 'memberStatus' | 'careNoteType';
+export type ReferenceKind =
+  | 'department'
+  | 'ministry'
+  | 'smallGroup'
+  | 'table'
+  | 'position'
+  | 'worshipService'
+  | 'memberStatus'
+  | 'careNoteType';
 
 export const REFERENCE_PATH: Record<ReferenceKind, string> = {
   department: 'departments',
   ministry: 'ministries',
   smallGroup: 'small-groups',
+  table: 'tables',
   position: 'positions',
   worshipService: 'worship-services',
   memberStatus: 'member-statuses',
@@ -14,6 +23,7 @@ export const REFERENCE_LABEL: Record<ReferenceKind, string> = {
   department: '기관',
   ministry: '사역팀',
   smallGroup: '공동체',
+  table: '테이블',
   position: '사역 역할',
   worshipService: '예배',
   memberStatus: '재적상태',
@@ -21,7 +31,7 @@ export const REFERENCE_LABEL: Record<ReferenceKind, string> = {
 };
 
 // 연도별로 편성하는 reference (해마다 재편성). 나머지(사역 역할·예배)는 연도 무관 공통.
-export const YEAR_SCOPED_KINDS = new Set<ReferenceKind>(['department', 'ministry', 'smallGroup']);
+export const YEAR_SCOPED_KINDS = new Set<ReferenceKind>(['department', 'ministry', 'smallGroup', 'table']);
 
 export type Reference = {
   id: number;

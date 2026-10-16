@@ -2,7 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import type { AffiliationKind } from '@src/module/affiliation/affiliation.service';
 
-const AFFILIATION_KINDS = ['department', 'ministry', 'smallGroup'] as const;
+const AFFILIATION_KINDS = ['department', 'ministry', 'smallGroup', 'table'] as const;
 
 export class ListMemberQueryDto {
   /** 이름·전화 부분 일치 */

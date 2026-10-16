@@ -23,6 +23,7 @@ export type CurrentChurch = {
   departmentLabel?: string | null;
   ministryLabel?: string | null;
   smallGroupLabel?: string | null;
+  tableLabel?: string | null;
 };
 
 export type MeResponse = {

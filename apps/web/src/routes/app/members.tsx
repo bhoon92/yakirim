@@ -271,11 +271,14 @@ function AffiliationFilter({
   const departments = useQuery({ queryKey: ['references', 'department', year], queryFn: () => listReferences('department', year) }).data;
   const ministries = useQuery({ queryKey: ['references', 'ministry', year], queryFn: () => listReferences('ministry', year) }).data;
   const smallGroups = useQuery({ queryKey: ['references', 'smallGroup', year], queryFn: () => listReferences('smallGroup', year) }).data;
+  const tables = useQuery({ queryKey: ['references', 'table', year], queryFn: () => listReferences('table', year) }).data;
+  const orgLabels = useOrgLabels();
 
   const groups: { kind: AffiliationKind; label: string; items: Reference[] }[] = [
-    { kind: 'department', label: '부서', items: departments ?? [] },
-    { kind: 'ministry', label: '사역팀', items: ministries ?? [] },
-    { kind: 'smallGroup', label: '목장', items: smallGroups ?? [] },
+    { kind: 'department', label: orgLabels.department, items: departments ?? [] },
+    { kind: 'ministry', label: orgLabels.ministry, items: ministries ?? [] },
+    { kind: 'smallGroup', label: orgLabels.smallGroup, items: smallGroups ?? [] },
+    { kind: 'table', label: orgLabels.table, items: tables ?? [] },
   ];
 
   return (
@@ -356,7 +359,7 @@ function FilterChips({
  * 목록 한 행의 역할·소속 태그 — 상세에서 넣은 것이 여기서도 보이게.
  *
  * 색은 상세 모달과 같은 기준(기준정보 id)이라 같은 조직이면 같은 색이다.
- * 종류를 색으로는 구분할 수 없으니 순서를 고정하고(역할 → 기관 → 사역팀 → 공동체)
+ * 종류를 색으로는 구분할 수 없으니 순서를 고정하고(역할 → 기관 → 사역팀 → 공동체 → 테이블)
  * 어느 종류인지는 hover 로 알려준다. 리더는 테두리로 표시한다.
  */
 function MemberTags({ member }: { member: Member }) {
@@ -370,6 +373,7 @@ function MemberTags({ member }: { member: Member }) {
     [member.departments, orgLabels.department, 'd'],
     [member.ministries, orgLabels.ministry, 'm'],
     [member.smallGroups, orgLabels.smallGroup, 's'],
+    [member.tables ?? [], orgLabels.table, 't'],
   ];
   for (const [items, kind, prefix] of groups) {
     for (const item of items) {

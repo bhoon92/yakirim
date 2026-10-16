@@ -4,6 +4,8 @@ import { DataSources } from '@src/database/data-sources';
 import { DepartmentEntity } from '@src/database/entities/department.entity';
 import { MemberDepartmentEntity } from '@src/database/entities/member-department.entity';
 import { MemberMinistryEntity } from '@src/database/entities/member-ministry.entity';
+import { FellowshipTableEntity } from '@src/database/entities/fellowship-table.entity';
+import { MemberFellowshipTableEntity } from '@src/database/entities/member-fellowship-table.entity';
 import { MemberSmallGroupEntity } from '@src/database/entities/member-small-group.entity';
 import { MemberEntity } from '@src/database/entities/member.entity';
 import { MinistryEntity } from '@src/database/entities/ministry.entity';
@@ -11,7 +13,7 @@ import { SmallGroupEntity } from '@src/database/entities/small-group.entity';
 import { todayString } from '@src/common/date';
 import { AssignAffiliationDto } from './dto/assign.dto';
 
-export type AffiliationKind = 'department' | 'ministry' | 'smallGroup';
+export type AffiliationKind = 'department' | 'ministry' | 'smallGroup' | 'table';
 
 /** 목록에 붙일 소속 태그. `id` 는 reference id — 화면에서 색을 정하는 값으로도 쓴다. */
 export type AffiliationTag = { id: number; name: string | null; isLeader: boolean };
@@ -19,6 +21,7 @@ export type AffiliationTagSet = {
   departments: AffiliationTag[];
   ministries: AffiliationTag[];
   smallGroups: AffiliationTag[];
+  tables: AffiliationTag[];
 };
 
 type JoinRow = ObjectLiteral & {
@@ -54,6 +57,11 @@ const CONFIGS = {
     joinEntity: MemberSmallGroupEntity,
     referenceEntity: SmallGroupEntity,
     referenceKey: 'smallGroupId' as const,
+  },
+  table: {
+    joinEntity: MemberFellowshipTableEntity,
+    referenceEntity: FellowshipTableEntity,
+    referenceKey: 'tableId' as const,
   },
 } as const;
 
@@ -152,12 +160,13 @@ export class AffiliationService {
   async currentForMembers(churchId: number, memberIds: number[]): Promise<Map<number, AffiliationTagSet>> {
     const result = new Map<number, AffiliationTagSet>();
     if (memberIds.length === 0) return result;
-    for (const memberId of memberIds) result.set(memberId, { departments: [], ministries: [], smallGroups: [] });
+    for (const memberId of memberIds) result.set(memberId, { departments: [], ministries: [], smallGroups: [], tables: [] });
 
     const BUCKET: Record<AffiliationKind, keyof AffiliationTagSet> = {
       department: 'departments',
       ministry: 'ministries',
       smallGroup: 'smallGroups',
+      table: 'tables',
     };
 
     await Promise.all(
@@ -191,12 +200,13 @@ export class AffiliationService {
   }
 
   async listForMember(churchId: number, memberId: number) {
-    const [departments, ministries, smallGroups] = await Promise.all([
+    const [departments, ministries, smallGroups, tables] = await Promise.all([
       this.currentJoins('department', churchId, memberId),
       this.currentJoins('ministry', churchId, memberId),
       this.currentJoins('smallGroup', churchId, memberId),
+      this.currentJoins('table', churchId, memberId),
     ]);
-    return { departments, ministries, smallGroups };
+    return { departments, ministries, smallGroups, tables };
   }
 
   private async currentJoins(kind: AffiliationKind, churchId: number, memberId: number) {

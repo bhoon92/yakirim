@@ -137,7 +137,7 @@ export class MemberService {
       statusName: statusMap.get(member.statusId)?.name ?? null,
       position: positionByMember.get(member.id) ?? null,
       shepherd: shepherdByMember.get(member.id) ?? null,
-      ...(affiliationsByMember.get(member.id) ?? { departments: [], ministries: [], smallGroups: [] }),
+      ...(affiliationsByMember.get(member.id) ?? { departments: [], ministries: [], smallGroups: [], tables: [] }),
     }));
     const counts = await this.countByStatus(churchId, query.q, affiliationMemberIds, statusMap);
 
