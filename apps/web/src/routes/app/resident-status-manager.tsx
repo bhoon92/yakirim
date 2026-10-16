@@ -1,23 +1,54 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Eye, EyeOff, Plus, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Eye, EyeOff, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import {
   createResidentStatus,
   deleteResidentStatus,
   listResidentStatuses,
+  RESIDENT_PHASE_LABEL,
   updateResidentStatus,
+  type ResidentPhase,
   type ResidentStatus,
 } from '@/api/residents';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { isSubmitEnter } from '@/lib/keyboard';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/lib/permissions';
 
+const PHASES: ResidentPhase[] = ['preparing', 'resident', 'left'];
+
+/** 구간 고르기 — 노션 status 의 묶음(할 일/진행 중/완료)처럼. */
+function PhaseSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: ResidentPhase;
+  onChange: (phase: ResidentPhase) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <select
+      value={value}
+      disabled={disabled}
+      onChange={event => onChange(event.target.value as ResidentPhase)}
+      className="h-7 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-1.5 text-xs"
+      aria-label="구간"
+    >
+      {PHASES.map(phase => (
+        <option key={phase} value={phase}>
+          {RESIDENT_PHASE_LABEL[phase]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 /**
- * 간사 상태 관리 — 선교사 단계 관리와 같은 모양이다.
- * 코드가 아는 규약은 "공동체 집계"(countsAsActive) 하나뿐이라 그것만 별도 토글로 노출한다.
+ * 간사 상태 관리 — 노션 칸반의 status 처럼 이름·순서·구간을 교회가 정한다.
+ * 코드가 아는 건 구간뿐이다: 진입 준비(지원·면담·과정 …) / 간사(공동체 집계) / 떠남.
  */
 export function ResidentStatusManagerModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
@@ -67,6 +98,23 @@ function StatusList() {
     onError: (error: Error) => window.alert(`변경 실패: ${error.message}`),
   });
 
+  // 순서 바꾸기 — 두 상태의 위치를 맞바꾸고 전체를 0부터 다시 매긴다(겹친 sortOrder 정리)
+  const reorderMut = useMutation({
+    mutationFn: async (ordered: ResidentStatus[]) => {
+      await Promise.all(
+        ordered.map((status, index) => (status.sortOrder === index ? null : updateResidentStatus(status.id, { sortOrder: index })))
+      );
+    },
+    onSuccess: invalidate,
+    onError: (error: Error) => window.alert(`순서 변경 실패: ${error.message}`),
+  });
+  const swap = (from: number, to: number) => {
+    if (to < 0 || to >= statuses.length) return;
+    const ordered = [...statuses];
+    [ordered[from], ordered[to]] = [ordered[to], ordered[from]];
+    reorderMut.mutate(ordered);
+  };
+
   const deleteMut = useMutation({
     mutationFn: (id: number) => deleteResidentStatus(id),
     onSuccess: invalidate,
@@ -80,15 +128,15 @@ function StatusList() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-[var(--color-muted-foreground)]">
-        상태 이름과 순서는 교회에 맞게 바꾸세요. <strong>공동체 집계</strong>를 켠 상태에 있는 사람이 “지금 공동체에 있는 간사”로 잡히고,
-        집계 상태에서 벗어날 때 퇴소일이 비어 있으면 그날로 채워집니다.
+        상태 이름·순서·구간은 교회에 맞게 바꾸세요(이름을 누르면 고칩니다). <strong>간사</strong> 구간에 있는 사람만 공동체 인원으로 셉니다.
+        진입 준비에서 간사로 옮기면 헌신일·입주일이, 간사에서 벗어나면 퇴소일이 비어 있을 때 그날로 채워집니다.
       </p>
 
       {isLoading ? (
         <p className="text-sm text-[var(--color-muted-foreground)]">불러오는 중…</p>
       ) : (
         <ul className="space-y-2">
-          {statuses.map(status => (
+          {statuses.map((status, index) => (
             <li
               key={status.id}
               className={cn(
@@ -96,18 +144,29 @@ function StatusList() {
                 !status.isActive && 'opacity-50'
               )}
             >
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="truncate text-sm font-medium">{status.name}</span>
-                {status.countsAsActive && <Badge tone="success">공동체 집계</Badge>}
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <StatusName status={status} editable={canWrite} onRename={name => patchMut.mutate({ id: status.id, payload: { name } })} />
               </div>
               {canWrite && (
                 <div className="flex shrink-0 items-center gap-1">
+                  <PhaseSelect value={status.phase} onChange={phase => patchMut.mutate({ id: status.id, payload: { phase } })} />
                   <button
-                    onClick={() => patchMut.mutate({ id: status.id, payload: { countsAsActive: !status.countsAsActive } })}
-                    className="rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[11px] transition-colors hover:bg-[var(--color-muted)]"
-                    title="'지금 공동체에 있는 간사' 집계에 포함할지"
+                    onClick={() => swap(index, index - 1)}
+                    disabled={index === 0}
+                    className="rounded-full p-1 text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-30"
+                    aria-label={`${status.name} 위로`}
+                    title="위로"
                   >
-                    {status.countsAsActive ? '집계 해제' : '집계 포함'}
+                    <ArrowUp className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={() => swap(index, index + 1)}
+                    disabled={index === statuses.length - 1}
+                    className="rounded-full p-1 text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-30"
+                    aria-label={`${status.name} 아래로`}
+                    title="아래로"
+                  >
+                    <ArrowDown className="size-3.5" />
                   </button>
                   <button
                     onClick={() => patchMut.mutate({ id: status.id, payload: { isActive: !status.isActive } })}
@@ -157,27 +216,67 @@ function StatusList() {
   );
 }
 
+/** 이름을 누르면 그 자리에서 고친다 (노션 status 이름 바꾸기처럼). */
+function StatusName({ status, editable, onRename }: { status: ResidentStatus; editable: boolean; onRename: (name: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(status.name);
+  if (!editable || !editing) {
+    return (
+      <button
+        type="button"
+        disabled={!editable}
+        onClick={() => {
+          setValue(status.name);
+          setEditing(true);
+        }}
+        className="truncate text-left text-sm font-medium enabled:hover:underline"
+        title={editable ? '이름 바꾸기' : undefined}
+      >
+        {status.name}
+      </button>
+    );
+  }
+  const commit = () => {
+    const next = value.trim();
+    if (next && next !== status.name) onRename(next);
+    setEditing(false);
+  };
+  return (
+    <Input
+      autoFocus
+      value={value}
+      maxLength={40}
+      onChange={event => setValue(event.target.value)}
+      onBlur={commit}
+      onKeyDown={event => {
+        if (event.key === 'Escape') setEditing(false);
+        if (isSubmitEnter(event)) {
+          event.preventDefault();
+          commit();
+        }
+      }}
+      className="h-8 text-sm"
+    />
+  );
+}
+
 function StatusForm({ nextSortOrder, onDone, onCancel }: { nextSortOrder: number; onDone: () => void; onCancel: () => void }) {
   const [name, setName] = useState('');
-  const [countsAsActive, setCountsAsActive] = useState(false);
+  const [phase, setPhase] = useState<ResidentPhase>('preparing');
 
   const createMut = useMutation({
-    mutationFn: () => createResidentStatus({ name: name.trim(), countsAsActive, sortOrder: nextSortOrder }),
+    mutationFn: () => createResidentStatus({ name: name.trim(), phase, sortOrder: nextSortOrder }),
     onSuccess: onDone,
     onError: (error: Error) => window.alert(`상태 추가 실패: ${error.message}`),
   });
 
   return (
     <div className="space-y-3 rounded-xl border border-dashed border-[var(--color-border)] p-3">
-      <Input placeholder="상태 이름 (예: 휴직)" value={name} onChange={event => setName(event.target.value)} />
+      <Input placeholder="상태 이름 (예: 2차 면담, 휴직)" value={name} onChange={event => setName(event.target.value)} />
       <label className="flex items-center gap-2 text-xs">
-        <input
-          type="checkbox"
-          checked={countsAsActive}
-          onChange={event => setCountsAsActive(event.target.checked)}
-          className="size-4 accent-[var(--color-foreground)]"
-        />
-        이 상태를 “지금 공동체에 있는 간사”로 집계
+        구간
+        <PhaseSelect value={phase} onChange={setPhase} />
+        <span className="text-[var(--color-muted-foreground)]">간사 구간만 공동체 인원으로 셉니다</span>
       </label>
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="ghost" onClick={onCancel}>

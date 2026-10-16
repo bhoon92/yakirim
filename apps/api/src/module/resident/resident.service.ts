@@ -7,7 +7,7 @@ import { MemberStatusEntity } from '@src/database/entities/member-status.entity'
 import { ResidentDutyAssignmentEntity } from '@src/database/entities/resident-duty-assignment.entity';
 import { ResidentProfileEntity } from '@src/database/entities/resident-profile.entity';
 import { ResidentStatusHistoryEntity } from '@src/database/entities/resident-status-history.entity';
-import { ResidentStatusEntity } from '@src/database/entities/resident-status.entity';
+import { ResidentPhase, ResidentStatusEntity } from '@src/database/entities/resident-status.entity';
 import { TrainingCohortEntity } from '@src/database/entities/training-cohort.entity';
 import { EnrollmentStatus, TrainingEnrollmentEntity } from '@src/database/entities/training-enrollment.entity';
 import { todayString } from '@src/common/date';
@@ -30,6 +30,8 @@ export type ResidentItem = {
   statusName: string | null;
   /** 이 상태가 '지금 공동체에 있는 간사'로 집계되는지. */
   statusCountsAsActive: boolean;
+  /** 상태의 구간 — 진입 준비 / 간사 / 떠남. 상태가 없으면 null */
+  statusPhase: ResidentPhase | null;
   joinedAt: string | null;
   committedAt: string | null;
   leftAt: string | null;
@@ -56,7 +58,9 @@ export type ResidentHistoryItem = {
 
 export type ResidentSummary = {
   active: number;
-  byStatus: { statusId: number | null; name: string; count: number; countsAsActive: boolean }[];
+  /** 진입 준비 중인 사람 (지원·면담·과정 …) — 아직 간사가 아니라 active 에 안 들어간다 */
+  preparing: number;
+  byStatus: { statusId: number | null; name: string; count: number; countsAsActive: boolean; phase: ResidentPhase | null }[];
 };
 
 const STEP_RANK: Record<EnrollmentStatus, number> = {
@@ -116,12 +120,15 @@ export class ResidentService {
       name: status.name,
       count: profiles.filter(profile => profile.statusId === status.id).length,
       countsAsActive: status.countsAsActive,
+      phase: status.phase,
     }));
     const unassigned = profiles.filter(profile => !profile.statusId).length;
-    if (unassigned > 0) byStatus.push({ statusId: null, name: '상태 미지정', count: unassigned, countsAsActive: false });
+    if (unassigned > 0) byStatus.push({ statusId: null, name: '상태 미지정', count: unassigned, countsAsActive: false, phase: null });
+    const preparingIds = new Set(statuses.filter(status => status.phase === ResidentPhase.PREPARING).map(status => status.id));
 
     return {
       active: profiles.filter(profile => profile.statusId && activeIds.has(profile.statusId)).length,
+      preparing: profiles.filter(profile => profile.statusId && preparingIds.has(profile.statusId)).length,
       byStatus,
     };
   }
@@ -206,6 +213,12 @@ export class ResidentService {
         ]);
         const leaving = (before?.countsAsActive ?? false) && !(after?.countsAsActive ?? false);
         if (leaving && !profile.leftAt && dto.leftAt === undefined) patch.leftAt = date;
+        // 진입 구간에서 간사 구간으로 = 헌신·입주한 날. 비어 있을 때만 채운다(직접 적은 날짜가 이긴다)
+        const entering = before?.phase === ResidentPhase.PREPARING && after?.phase === ResidentPhase.RESIDENT;
+        if (entering) {
+          if (!profile.committedAt && dto.committedAt === undefined) patch.committedAt = date;
+          if (!profile.joinedAt && dto.joinedAt === undefined) patch.joinedAt = date;
+        }
 
         await this.recordHistory(manager, churchId, id, accountId, dto.statusId, date, dto.statusReason ?? null);
       }
@@ -320,6 +333,7 @@ export class ResidentService {
         statusId: profile.statusId ?? null,
         statusName: status?.name ?? null,
         statusCountsAsActive: status?.countsAsActive ?? false,
+        statusPhase: status?.phase ?? null,
         joinedAt: profile.joinedAt ?? null,
         committedAt: profile.committedAt ?? null,
         leftAt: profile.leftAt ?? null,
