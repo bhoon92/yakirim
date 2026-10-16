@@ -73,6 +73,30 @@ export class ExportController {
     this.send(res, await this.exports.members_xlsx(auth.churchId), 'members.xlsx');
   }
 
+  @Get('attendance-sheet')
+  @Permissions('attendance:read')
+  @ApiOperation({
+    summary: '종이 출석부 엑셀',
+    description:
+      '인쇄해서 손으로 체크하는 출석부 양식. 그 달 주일마다 빈 칸, 출석 명단과 같은 사람(이름순), 맨 아래 새로 온 분을 적을 빈 줄. A4 가로에 맞춰 인쇄된다.',
+  })
+  @ApiQuery({ name: 'month', required: true, type: String, description: '대상 월 (YYYY-MM)' })
+  @ApiQuery({ name: 'worshipServiceId', required: false, type: Number, description: '제목에 넣을 예배. 생략하면 예배 이름 없이.' })
+  @ApiOkResponse(XLSX_RESPONSE)
+  async attendanceSheet(
+    @RequireChurch() auth: AuthContext & { churchId: number },
+    @Res() res: Response,
+    @Query('month') month: string,
+    @Query('worshipServiceId') worshipServiceId?: string
+  ) {
+    const buffer = await this.exports.attendance_sheet_xlsx(
+      auth.churchId,
+      month ?? '',
+      worshipServiceId ? Number(worshipServiceId) : undefined
+    );
+    this.send(res, buffer, `attendance-${month}.xlsx`);
+  }
+
   @Get('residents')
   @Permissions('resident:read')
   @ApiOperation({

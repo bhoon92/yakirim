@@ -20,3 +20,9 @@ export const exportBudgets = (fiscalYearId?: number) =>
 export const exportMembers = () => downloadXlsx('/api/export/members', 'members.xlsx');
 export const exportResidents = () => downloadXlsx('/api/export/residents', 'residents.xlsx');
 export const exportMissionaries = () => downloadXlsx('/api/export/missionaries', 'missionaries.xlsx');
+/** 종이 출석부 — 그 달(YYYY-MM) 주일 칸이 있는 인쇄용 양식. */
+export const exportAttendanceSheet = (month: string, worshipServiceId?: number) =>
+  downloadXlsx(
+    `/api/export/attendance-sheet?month=${month}${worshipServiceId ? `&worshipServiceId=${worshipServiceId}` : ''}`,
+    `attendance-${month}.xlsx`
+  );
