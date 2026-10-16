@@ -1,6 +1,7 @@
 import { Workbook } from 'exceljs';
 import { DataSource } from 'typeorm';
 import { ChurchEntity } from '@src/database/entities/church.entity';
+import { FellowshipTableEntity } from '@src/database/entities/fellowship-table.entity';
 import { MemberStatusEntity } from '@src/database/entities/member-status.entity';
 import { MemberEntity } from '@src/database/entities/member.entity';
 import { MissionaryStageEntity } from '@src/database/entities/missionary-stage.entity';
@@ -115,19 +116,22 @@ describe('ExportService — 간사·선교사 명부·출석부 (실제 Postgres
     const settled = await statuses.save(statuses.create({ churchId, name: '정착', sortOrder: 0 }));
     const moved = await statuses.save(statuses.create({ churchId, name: '이명', sortOrder: 1, countsInRoster: false }));
     const repo = dataSource.getRepository(MemberEntity);
-    await repo.save([
+    const [ha] = await repo.save([
       repo.create({ churchId, name: '하성도', statusId: settled.id }),
       repo.create({ churchId, name: '가성도', statusId: settled.id }),
       repo.create({ churchId, name: '나이명', statusId: moved.id }),
     ]);
+    const tables = dataSource.getRepository(FellowshipTableEntity);
+    const table = await tables.save(tables.create({ churchId, year: 2026, name: '1테이블' }));
+    await new AffiliationService().assign('table', churchId, ha.id, { referenceId: table.id });
 
     const rows = await readSheet(await exports.attendance_sheet_xlsx(churchId, '2026-11'));
 
     expect(rows[0][0]).toBe('테스트교회 출석부 — 2026년 11월');
-    expect(rows[1]).toEqual(['번호', '이름', '목장', '재적상태', '11/1', '11/8', '11/15', '11/22', '11/29', '비고']);
-    expect(rows.slice(2, 4).map(row => [row[0], row[1], row[3]])).toEqual([
-      [1, '가성도', '정착'],
-      [2, '하성도', '정착'],
+    expect(rows[1]).toEqual(['번호', '이름', '테이블', '재적상태', '11/1', '11/8', '11/15', '11/22', '11/29', '비고']);
+    expect(rows.slice(2, 4).map(row => [row[0], row[1], row[2], row[3]])).toEqual([
+      [1, '가성도', '', '정착'],
+      [2, '하성도', '1테이블', '정착'],
     ]);
     expect(rows.flat()).not.toContain('나이명');
     expect(rows.at(-1)?.[1]).toBe('출석 인원');

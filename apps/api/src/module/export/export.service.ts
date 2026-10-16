@@ -217,7 +217,7 @@ export class ExportService {
     ws.columns = [
       { key: 'no', width: 6 },
       { key: 'name', width: 14 },
-      { key: 'smallGroup', width: 14 },
+      { key: 'table', width: 14 },
       { key: 'status', width: 10 },
       ...sundays.map(date => ({ key: date, width: 9 })),
       { key: 'note', width: 22 },
@@ -236,7 +236,7 @@ export class ExportService {
     const header = ws.addRow([
       '번호',
       '이름',
-      '목장',
+      '테이블',
       '재적상태',
       ...sundays.map(date => `${Number(date.slice(5, 7))}/${Number(date.slice(8))}`),
       '비고',
@@ -252,7 +252,7 @@ export class ExportService {
       ws.addRow([
         index + 1,
         member.name,
-        names(affiliations.get(member.id)?.smallGroups ?? []),
+        names(affiliations.get(member.id)?.tables ?? []),
         statusMap.get(member.statusId)?.name ?? '',
         ...sundays.map(() => ''),
         '',
