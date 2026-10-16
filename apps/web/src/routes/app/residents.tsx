@@ -35,6 +35,7 @@ import { MemberDetailModal } from './member-detail-modal';
 import { ResidentDutyPicker } from './resident-duty-picker';
 import { ResidentFlockSection } from './resident-flock-section';
 import { ResidentStatusManagerModal } from './resident-status-manager';
+import { ResidentBoard } from './resident-board';
 
 /**
  * 공동체 간사 — 공동생활을 하며 내부에서 섬기는 선교사.
@@ -45,7 +46,9 @@ import { ResidentStatusManagerModal } from './resident-status-manager';
 export function ResidentsPage() {
   const { can } = usePermissions();
   const canWrite = can('resident:write');
-  const [filter, setFilter] = useState<{ kind: 'active' | 'all' | 'status'; statusId?: number }>({ kind: 'active' });
+  const [filter, setFilter] = useState<{ kind: 'active' | 'preparing' | 'all' | 'status'; statusId?: number }>({ kind: 'active' });
+  // 노션처럼 같은 사람들을 목록·보드 두 가지로 본다. 보드는 진입 준비 → 간사 → 떠남 흐름이 한눈에 보인다
+  const [view, setView] = useState<'list' | 'board'>('list');
   const [search, setSearch] = useState('');
   const [openId, setOpenId] = useState<number | null>(null);
   const [registering, setRegistering] = useState(false);
@@ -58,20 +61,22 @@ export function ResidentsPage() {
     queryKey: ['residents', filter],
     queryFn: () =>
       listResidents(filter.kind === 'status' ? { statusId: filter.statusId } : { scope: filter.kind === 'active' ? 'active' : 'all' }),
+    enabled: view === 'list',
   });
 
   // 50명 규모라 서버 검색까지 갈 필요 없이 받아온 목록에서 거른다.
   const visible = useMemo(() => {
     const keyword = search.trim();
-    if (!keyword) return residents;
-    return residents.filter(
+    const scoped = filter.kind === 'preparing' ? residents.filter(resident => resident.statusPhase === 'preparing') : residents;
+    if (!keyword) return scoped;
+    return scoped.filter(
       resident =>
         resident.memberName.includes(keyword) ||
         resident.smallGroups.some(tag => tag.name?.includes(keyword)) ||
         resident.ministries.some(tag => tag.name?.includes(keyword)) ||
         resident.duties.some(duty => duty.name.includes(keyword))
     );
-  }, [residents, search]);
+  }, [residents, search, filter.kind]);
 
   // STEP 번호가 있는 과정만 사다리다. 숨긴 과정도 수료 이력은 남아 있으니 함께 보여준다.
   const steps = useMemo(() => courses.filter(course => course.step !== null).sort(byLadder), [courses]);
@@ -106,29 +111,57 @@ export function ResidentsPage() {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile label="공동체 인원" value={summary ? `${summary.active}명` : '—'} />
-        {(summary?.byStatus ?? []).slice(0, 3).map(row => (
-          <StatTile key={row.statusId ?? 'none'} label={row.name} value={`${row.count}명`} />
-        ))}
+        <StatTile label="진입 준비" value={summary ? `${summary.preparing}명` : '—'} />
+        {(summary?.byStatus ?? [])
+          .filter(row => row.phase === 'resident')
+          .slice(0, 2)
+          .map(row => (
+            <StatTile key={row.statusId ?? 'none'} label={row.name} value={`${row.count}명`} />
+          ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        <FilterChip active={filter.kind === 'active'} onClick={() => setFilter({ kind: 'active' })}>
-          공동체
-        </FilterChip>
-        <FilterChip active={filter.kind === 'all'} onClick={() => setFilter({ kind: 'all' })}>
-          전체
-        </FilterChip>
-        {statuses
-          .filter(status => status.isActive)
-          .map(status => (
-            <FilterChip
-              key={status.id}
-              active={filter.kind === 'status' && filter.statusId === status.id}
-              onClick={() => setFilter({ kind: 'status', statusId: status.id })}
+        <div className="mr-1 inline-flex rounded-lg bg-[var(--color-muted)] p-0.5" role="tablist" aria-label="보기">
+          {(['list', 'board'] as const).map(mode => (
+            <button
+              key={mode}
+              type="button"
+              role="tab"
+              aria-selected={view === mode}
+              onClick={() => setView(mode)}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-xs font-medium',
+                view === mode ? 'bg-[var(--color-background)] shadow-sm' : 'text-[var(--color-muted-foreground)]'
+              )}
             >
-              {status.name} {countFor(status.id)}
-            </FilterChip>
+              {mode === 'list' ? '목록' : '보드'}
+            </button>
           ))}
+        </div>
+        {view === 'list' && (
+          <>
+            <FilterChip active={filter.kind === 'active'} onClick={() => setFilter({ kind: 'active' })}>
+              공동체
+            </FilterChip>
+            <FilterChip active={filter.kind === 'preparing'} onClick={() => setFilter({ kind: 'preparing' })}>
+              진입 준비 {summary?.preparing ?? ''}
+            </FilterChip>
+            <FilterChip active={filter.kind === 'all'} onClick={() => setFilter({ kind: 'all' })}>
+              전체
+            </FilterChip>
+            {statuses
+              .filter(status => status.isActive)
+              .map(status => (
+                <FilterChip
+                  key={status.id}
+                  active={filter.kind === 'status' && filter.statusId === status.id}
+                  onClick={() => setFilter({ kind: 'status', statusId: status.id })}
+                >
+                  {status.name} {countFor(status.id)}
+                </FilterChip>
+              ))}
+          </>
+        )}
         <div className="relative ml-auto w-full sm:w-56">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-[var(--color-muted-foreground)]" />
           <Input placeholder="이름·하우스·사역" value={search} onChange={event => setSearch(event.target.value)} className="pl-8" />
@@ -137,7 +170,9 @@ export function ResidentsPage() {
 
       {registering && <RegisterPanel statuses={statuses} onClose={() => setRegistering(false)} />}
 
-      {isLoading ? (
+      {view === 'board' ? (
+        <ResidentBoard statuses={statuses} canWrite={canWrite} search={search} onOpen={setOpenId} />
+      ) : isLoading ? (
         <p className="text-sm text-[var(--color-muted-foreground)]">불러오는 중…</p>
       ) : visible.length === 0 ? (
         <Card>
@@ -314,9 +349,14 @@ function RegisterPanel({ statuses, onClose }: { statuses: ResidentStatus[]; onCl
   const [picked, setPicked] = useState<Member | null>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  // null = 아직 고르지 않음 → 첫 '공동체 집계' 상태를 기본값으로 쓴다 (상태 목록이 늦게 와도 맞게)
+  // null = 아직 고르지 않음 → 첫 '진입 준비' 상태(기본값 "지원")로 — 간사는 지원부터 들어온다(2트랙).
+  // 이미 공동체에 사는 사람을 옮겨 적을 때는 상태를 "활동"으로 고르면 된다
   const [statusChoice, setStatusChoice] = useState<number | '' | null>(null);
-  const statusId = statusChoice ?? statuses.find(status => status.isActive && status.countsAsActive)?.id ?? '';
+  const statusId =
+    statusChoice ??
+    statuses.find(status => status.isActive && status.phase === 'preparing')?.id ??
+    statuses.find(status => status.isActive && status.countsAsActive)?.id ??
+    '';
   const [joinedAt, setJoinedAt] = useState('');
   const [committedAt, setCommittedAt] = useState('');
 

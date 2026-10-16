@@ -39,7 +39,7 @@ export class TrainingCohortController {
   @ApiOperation({
     summary: '놓친 수료 제안',
     description: [
-      '수료했는데 아직 과정이 정한 단계 아래에 있거나, 간사 등록 제안을 받지 않은 사람이 있는 기수 목록 (최근 기수 먼저).',
+      '수료했는데 아직 과정이 정한 단계 아래에 있는 사람이 있는 기수 목록 (최근 기수 먼저).',
       '넘긴 사람(`POST /training/cohorts/{id}/promotions/dismiss`)은 빠진다. 각 항목은 기수별 제안과 같은 모양이다.',
     ].join('\n'),
   })
@@ -174,8 +174,8 @@ export class TrainingCohortController {
   @ApiOperation({
     summary: '수료자 단계 제안',
     description: [
-      '이 기수 수료자 중 과정이 정한 단계(`completionStatusId`)보다 **아래에 있는 사람**과,',
-      '과정이 간사 등록을 제안하면(`completionSuggestsResident`) 아직 간사가 아닌 수료자를 돌려준다.',
+      '이 기수 수료자 중 과정이 정한 단계(`completionStatusId`)보다 **아래에 있는 사람**을 돌려준다.',
+      '간사 등록은 제안하지 않는다 — 간사는 성도 단계의 다음 칸이 아니라 진입 경로가 따로다.',
       '',
       '저장된 제안이 아니라 매번 계산한다 — 이미 올렸거나 다른 경로로 올라간 사람은 저절로 빠진다.',
       '**자동으로 바꾸지 않는다.** 반영은 `POST` 로 담당자가 한다.',

@@ -228,6 +228,7 @@ pg 드라이버가 `date` 컬럼을 **JS `Date` 로 주는 경우**(원시 쿼�
   부분 유니크 인덱스 때문에 **닫고 나서 열어야** 한다
 - **정체 판정은 `STALLED_CONDITION` 한 문장**(member-status-history.service) — `listStalled()` 와 `MemberService.list()` 의 `stalled` 필터가 같이 쓴다.
   "오늘"은 DB `CURRENT_DATE` 가 아니라 `stalledParams()` 로 앱이 넘긴다(운영 DB 는 UTC). 두 결과가 같은지는 테스트가 대조한다
+- **성도·간사는 2트랙** (2026-10-16 사용자) — 간사는 성도 단계의 다음 칸이 아니다. `resident_status.phase` = preparing(지원·면담·과정) / resident(활동·안식, 집계) / left. countsAsActive 는 phase 에서 맞춘다. 진입 → 간사로 옮기면 헌신일·입주일 자동. 재정 0 정리는 앱에 남기지 않는다(간사로 들어온 것 자체가 고백)
 - **파이프라인 보드(`/app/pipeline`, `GET /members/pipeline`)** — 단계 이동은 따로 없고 `PATCH /members/:id {statusId}` (이력 record 경유). 정체 표시는 listStalled 와 같은 기준(테스트가 대조)
 - **심방 기록 @멘션** — 본문엔 "@이름" 글자만, 연결은 `care_note.mentioned_member_ids`. 언급된 사람 카드에 백링크(`GET …/care-notes/mentions`). 자동완성은 `lib/autocomplete`(이모지 `:` 와 같은 훅)
 - **글자 입력칸은 `Input` / `Textarea`(components/ui) 를 쓴다** — 노션처럼 `:이름` 이모지 입력(lib/emoji)이 붙어 있다. 맨 `<input>`/`<textarea>` 에는 안 붙는다

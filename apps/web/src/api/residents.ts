@@ -17,8 +17,19 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 /**
- * 간사 상태는 교회별 기준정보다 (활동/안식/퇴소 …) — 프론트에 이름을 하드코딩하지 않는다.
- * `countsAsActive` 만 코드가 아는 규약(지금 공동체에 있는 간사로 셀지).
+ * 간사 트랙의 구간 — 노션 status 속성의 묶음처럼. 성도와 간사는 2트랙이라 간사는 진입 구간을 따로 거친다.
+ */
+export type ResidentPhase = 'preparing' | 'resident' | 'left';
+
+export const RESIDENT_PHASE_LABEL: Record<ResidentPhase, string> = {
+  preparing: '진입 준비',
+  resident: '간사',
+  left: '떠남',
+};
+
+/**
+ * 간사 상태는 교회별 기준정보다 (지원/면담/…/활동/안식/퇴소) — 프론트에 이름을 하드코딩하지 않는다.
+ * 코드가 아는 건 구간(phase)뿐이고, countsAsActive 는 phase === 'resident' 와 같다.
  */
 export type ResidentStatus = {
   id: number;
@@ -27,6 +38,7 @@ export type ResidentStatus = {
   sortOrder: number;
   isActive: boolean;
   countsAsActive: boolean;
+  phase: ResidentPhase;
 };
 
 export type ResidentTag = { id: number; name: string | null; isLeader: boolean };
@@ -39,6 +51,7 @@ export type Resident = {
   statusId: number | null;
   statusName: string | null;
   statusCountsAsActive: boolean;
+  statusPhase: ResidentPhase | null;
   joinedAt: string | null;
   committedAt: string | null;
   leftAt: string | null;
@@ -70,19 +83,21 @@ export type ResidentHistory = {
 
 export type ResidentSummary = {
   active: number;
-  byStatus: { statusId: number | null; name: string; count: number; countsAsActive: boolean }[];
+  /** 진입 준비 중인 사람 — 아직 간사가 아니다 */
+  preparing: number;
+  byStatus: { statusId: number | null; name: string; count: number; countsAsActive: boolean; phase: ResidentPhase | null }[];
 };
 
 // ─── 상태 기준정보 ───────────────────────────────────────────
 
 export const listResidentStatuses = () => request<ResidentStatus[]>(`${BASE}/statuses`);
 
-export const createResidentStatus = (payload: { name: string; countsAsActive?: boolean; sortOrder?: number }) =>
+export const createResidentStatus = (payload: { name: string; phase?: ResidentPhase; sortOrder?: number }) =>
   request<ResidentStatus>(`${BASE}/statuses`, { method: 'POST', body: JSON.stringify(payload) });
 
 export const updateResidentStatus = (
   id: number,
-  payload: Partial<{ name: string; isActive: boolean; countsAsActive: boolean; sortOrder: number }>
+  payload: Partial<{ name: string; isActive: boolean; phase: ResidentPhase; sortOrder: number }>
 ) => request<ResidentStatus>(`${BASE}/statuses/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
 
 export const deleteResidentStatus = (id: number) => request<void>(`${BASE}/statuses/${id}`, { method: 'DELETE' });

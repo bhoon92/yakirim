@@ -2,7 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { DataSources } from '@src/database/data-sources';
 import { ResidentProfileEntity } from '@src/database/entities/resident-profile.entity';
 import { ResidentStatusHistoryEntity } from '@src/database/entities/resident-status-history.entity';
-import { ResidentStatusEntity } from '@src/database/entities/resident-status.entity';
+import { ResidentPhase, ResidentStatusEntity } from '@src/database/entities/resident-status.entity';
 import { UpdateResidentStatusDto, UpsertResidentStatusDto } from './dto/resident.dto';
 
 /** 간사 상태 기준정보 CRUD. 선교사 단계와 같은 규칙 — 코드는 이름을 모르고 countsAsActive 만 안다. */
@@ -30,14 +30,32 @@ export class ResidentStatusService {
         description: dto.description,
         sortOrder: dto.sortOrder ?? 0,
         isActive: dto.isActive ?? true,
-        countsAsActive: dto.countsAsActive ?? false,
+        ...this.phaseFields(dto),
       })
     );
   }
 
+  /**
+   * phase 와 countsAsActive 를 같게 맞춘다 — 코드 곳곳의 집계가 countsAsActive 를 보기 때문.
+   * phase 를 주면 그대로, countsAsActive 만 주면(예전 클라이언트) 간사/떠남으로 옮긴다.
+   */
+  private phaseFields(dto: { phase?: ResidentPhase; countsAsActive?: boolean }, current?: ResidentStatusEntity) {
+    const phase =
+      dto.phase ??
+      (dto.countsAsActive === undefined
+        ? (current?.phase ?? ResidentPhase.LEFT)
+        : dto.countsAsActive
+          ? ResidentPhase.RESIDENT
+          : current?.phase === ResidentPhase.PREPARING
+            ? ResidentPhase.PREPARING
+            : ResidentPhase.LEFT);
+    return { phase, countsAsActive: phase === ResidentPhase.RESIDENT };
+  }
+
   async update(churchId: number, id: number, dto: UpdateResidentStatusDto): Promise<ResidentStatusEntity> {
-    await this.findById(churchId, id);
-    await this.repo().update({ id, churchId }, dto);
+    const current = await this.findById(churchId, id);
+    const touchesPhase = dto.phase !== undefined || dto.countsAsActive !== undefined;
+    await this.repo().update({ id, churchId }, { ...dto, ...(touchesPhase ? this.phaseFields(dto, current) : {}) });
     return this.findById(churchId, id);
   }
 

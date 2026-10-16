@@ -4,7 +4,6 @@ import { todayString } from '@src/common/date';
 import { DataSources } from '@src/database/data-sources';
 import { MemberStatusEntity } from '@src/database/entities/member-status.entity';
 import { MemberEntity } from '@src/database/entities/member.entity';
-import { ResidentProfileEntity } from '@src/database/entities/resident-profile.entity';
 import { TrainingCohortEntity } from '@src/database/entities/training-cohort.entity';
 import { TrainingCourseEntity } from '@src/database/entities/training-course.entity';
 import { EnrollmentStatus, TrainingEnrollmentEntity } from '@src/database/entities/training-enrollment.entity';
@@ -25,10 +24,6 @@ export type CohortPromotions = {
   target: { id: number; name: string } | null;
   /** 수료했는데 아직 target 보다 아래 단계에 있는 사람. */
   candidates: PromotionCandidate[];
-  /** 과정이 간사 등록을 제안하는지. */
-  suggestsResident: boolean;
-  /** 수료했는데 아직 간사가 아닌 사람. */
-  residentCandidates: { memberId: number; memberName: string }[];
 };
 
 /** 놓친 제안 — 제안이 남아 있는 기수만. 대시보드·훈련 화면이 모아 보여준다. */
@@ -62,12 +57,9 @@ export class TrainingPromotionService {
       .find({ where: { churchId, cohortId, status: EnrollmentStatus.COMPLETED, promotionDismissedAt: IsNull() } });
 
     const memberIds = completed.map(row => row.memberId);
-    const [members, statuses, residents] = await Promise.all([
+    const [members, statuses] = await Promise.all([
       memberIds.length > 0 ? DataSources.instance.getRepository(MemberEntity).find({ where: { churchId, id: In(memberIds) } }) : [],
       DataSources.instance.getRepository(MemberStatusEntity).find({ where: { churchId } }),
-      course.completionSuggestsResident && memberIds.length > 0
-        ? DataSources.instance.getRepository(ResidentProfileEntity).find({ where: { churchId, memberId: In(memberIds) } })
-        : [],
     ]);
     const statusMap = new Map(statuses.map(status => [status.id, status]));
     const memberMap = new Map(members.map(member => [member.id, member]));
@@ -89,19 +81,8 @@ export class TrainingPromotionService {
       }
     }
 
-    const residentIds = new Set(residents.map(resident => resident.memberId));
-    const residentCandidates = course.completionSuggestsResident
-      ? completed
-          .filter(row => !residentIds.has(row.memberId) && memberMap.has(row.memberId))
-          .map(row => ({ memberId: row.memberId, memberName: memberMap.get(row.memberId)!.name }))
-      : [];
-
-    return {
-      target: target ? { id: target.id, name: target.name } : null,
-      candidates,
-      suggestsResident: course.completionSuggestsResident,
-      residentCandidates,
-    };
+    // 간사는 성도 단계의 다음 칸이 아니다 — 진입 경로가 따로라(면담·과정·헌신) 수료로 간사를 제안하지 않는다 (2026-10-16 사용자)
+    return { target: target ? { id: target.id, name: target.name } : null, candidates };
   }
 
   /**
@@ -151,7 +132,7 @@ export class TrainingPromotionService {
    */
   async pending(churchId: number): Promise<PendingPromotion[]> {
     const courses = await DataSources.instance.getRepository(TrainingCourseEntity).find({ where: { churchId }, withDeleted: true });
-    const configured = courses.filter(course => course.completionStatusId || course.completionSuggestsResident);
+    const configured = courses.filter(course => course.completionStatusId);
     if (configured.length === 0) return [];
     const courseName = new Map(courses.map(course => [course.id, course.name]));
 
@@ -174,7 +155,7 @@ export class TrainingPromotionService {
     const result: PendingPromotion[] = [];
     for (const cohort of cohorts.filter(row => withCompleters.has(row.id))) {
       const promotions = await this.forCohort(churchId, cohort.id);
-      if (promotions.candidates.length === 0 && promotions.residentCandidates.length === 0) continue;
+      if (promotions.candidates.length === 0) continue;
       result.push({ ...promotions, cohortId: cohort.id, label: `${courseName.get(cohort.courseId) ?? ''} ${cohort.name}`.trim() });
     }
     return result;
