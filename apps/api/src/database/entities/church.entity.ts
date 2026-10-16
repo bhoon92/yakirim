@@ -57,7 +57,7 @@ export class ChurchEntity extends BaseDateEntityWithDeletedAt {
   @Column({ comment: '공동체 대분류의 교회별 표시 이름', type: 'varchar', nullable: true })
   smallGroupLabel?: string | null;
 
-  /** 테이블(예배 후 나눔 자리)은 키퍼스처치 요청으로 나중에 더한 네 번째 대분류다 — 셀·목장 모임에 해당한다. */
+  /** 테이블(예배 후 나눔 자리)은 키퍼스처치 요청으로 나중에 더한 네 번째 대분류다 — 다른 교회의 셀·목장 모임 자리. */
   @Column({ comment: '테이블 대분류의 교회별 표시 이름', type: 'varchar', nullable: true })
   tableLabel?: string | null;
 }

@@ -8,7 +8,7 @@ export enum BudgetTargetKind {
   SMALL_GROUP = 'small_group',
 }
 
-/** 부서·사역팀·목장 단위 예산 할당. */
+/** 부서·사역팀·공동체 단위 예산 할당. */
 @Entity('budget_allocation')
 @Index(['churchId'])
 @Index(['churchId', 'fiscalYearId'])

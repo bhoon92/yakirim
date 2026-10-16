@@ -10,7 +10,7 @@ export class ListMemberQueryDto {
   @IsString()
   q?: string;
 
-  /** 소속 검색: 부서/사역팀/목장 종류 */
+  /** 소속 검색: 부서/사역팀/공동체/테이블 종류 */
   @IsOptional()
   @IsIn(AFFILIATION_KINDS)
   affiliationKind?: AffiliationKind;

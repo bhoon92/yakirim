@@ -2,11 +2,11 @@ import { applyDecorators } from '@nestjs/common';
 import { ApiQuery } from '@nestjs/swagger';
 
 /**
- * 기준정보 7종(부서·사역팀·목장·직분·예배·헌금항목·계정과목)은 같은 ReferenceService 를 공유하는
+ * 기준정보 8종(부서·사역팀·공동체·테이블·직분·예배·헌금항목·계정과목)은 같은 ReferenceService 를 공유하는
  * 동일 형태의 CRUD 다. 컨트롤러마다 같은 문장을 복사하지 않도록 Swagger 설명을 여기 모아둔다.
  */
 
-/** 부서·사역팀·목장 = 연도별로 따로 관리되는 기준정보. */
+/** 부서·사역팀·공동체·테이블 = 연도별로 따로 관리되는 기준정보. */
 export const YEARLY_NOTE = '이 기준정보는 **연도별**로 분리되어 있어 `year` 쿼리가 필수다.';
 
 export function listDescription(what: string, yearly: boolean): string {

@@ -16,7 +16,7 @@ import { SmallGroupEntity } from '@src/database/entities/small-group.entity';
 
 /**
  * 조직도 (planning 3) — 별도 트리 데이터를 두지 않고 재적의 활성 소속 조인에서 derive.
- * 단위(부서/사역팀/목장/테이블) 마다 리더(isLeader)와 일반 구성원을 분리해 반환.
+ * 단위(부서/사역팀/공동체/테이블) 마다 리더(isLeader)와 일반 구성원을 분리해 반환.
  * 읽기 전용: 편집은 재적 상세의 소속/리더 관리(AffiliationModule)에서 수행.
  */
 export type OrganizationKind = 'department' | 'ministry' | 'smallGroup' | 'table';

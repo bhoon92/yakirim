@@ -144,7 +144,7 @@ export class MemberService {
     return { items: view, total, page, pageSize, counts };
   }
 
-  /** 소속(부서/사역팀/목장) 필터가 있으면 해당 활성 소속 성도 id 목록, 없으면 null. */
+  /** 소속(부서/사역팀/공동체/테이블) 필터가 있으면 해당 활성 소속 성도 id 목록, 없으면 null. */
   private async resolveAffiliationMemberIds(churchId: number, query: ListMemberQueryDto): Promise<number[] | null> {
     if (!query.affiliationKind || !query.affiliationId) return null;
     return this.affiliations.memberIdsFor(query.affiliationKind, churchId, query.affiliationId);

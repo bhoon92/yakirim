@@ -11,7 +11,7 @@ import { MemberService } from '@src/module/member/member.service';
 import { MissionaryService } from '@src/module/missionary/missionary.service';
 import { ResidentService } from '@src/module/resident/resident.service';
 
-const KIND_LABEL: Record<string, string> = { department: '부서', ministry: '사역팀', small_group: '목장' };
+const KIND_LABEL: Record<string, string> = { department: '부서', ministry: '사역팀', small_group: '공동체' };
 
 /** 웹 ENROLLMENT_STATUS_LABEL 과 같은 말. */
 const ENROLLMENT_LABEL: Record<EnrollmentStatus, string> = {

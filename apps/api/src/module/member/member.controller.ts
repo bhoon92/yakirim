@@ -31,7 +31,7 @@ export class MemberController {
       '활성 교회의 교인을 최근 등록순으로 반환한다.',
       '',
       '- `q`: 이름·전화 부분 일치',
-      '- `affiliationKind` + `affiliationId`: 특정 부서/사역팀/목장 소속만 (둘을 함께 보내야 함)',
+      '- `affiliationKind` + `affiliationId`: 특정 부서/사역팀/공동체/테이블 소속만 (둘을 함께 보내야 함)',
       '- `statusId`: 재적상태 필터',
       '- `stalled=true`: 현재 단계에 기준 일수 이상 머물러 있는 교인만 (대시보드 "정체된 사람" 과 같은 기준)',
       '- 응답: `{ items, total, page, pageSize, counts }` — `counts` 는 재적상태별 인원 수(필터 배지용)',
@@ -99,7 +99,7 @@ export class MemberController {
   @Permissions('member:read')
   @ApiOperation({
     summary: '교인 상세',
-    description: '기본 정보에 재적상태 이름, 소속(부서/사역팀/목장) 목록, 직분 이력을 합쳐서 반환한다.',
+    description: '기본 정보에 재적상태 이름, 소속(부서/사역팀/공동체/테이블) 목록, 직분 이력을 합쳐서 반환한다.',
   })
   @ApiNotFoundResponse({ description: '해당 교회에 없는 교인 id' })
   detail(@RequireChurch() auth: AuthContext & { churchId: number }, @Param('id', ParseIntPipe) id: number) {
