@@ -94,6 +94,9 @@ export function AppLayout() {
 
 function Shell() {
   const location = useLocation();
+  // 빠른 이동(⌘K)은 하나만 — 데스크톱 상단 검색창과 폰 헤더 버튼이 같은 창을 연다
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const groups = useNavGroups();
 
   return (
     <div className="flex min-h-svh bg-[var(--color-canvas)]">
@@ -105,8 +108,9 @@ function Shell() {
        * overflow-hidden 은 쓰지 않는다 — 상단바 sticky 가 죽는다. 대신 상단바가 자기 모서리를 갖는다.
        */}
       <div className="flex min-w-0 flex-1 flex-col bg-[var(--color-background)] md:my-2 md:mr-2 md:rounded-xl md:shadow-[var(--shadow-panel)]">
-        <TopBar />
-        <MobileHeader />
+        <TopBar onSearch={() => setPaletteOpen(true)} />
+        <MobileHeader onSearch={() => setPaletteOpen(true)} />
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} navItems={groups.flatMap(group => group.items)} />
 
         <motion.main
           key={location.pathname}
@@ -187,8 +191,7 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
  * 상단바 — flex 의 그 줄. 전역 검색 / 도움말 / 알림 / 프로필.
  * 검색은 아직 백엔드 전역 검색이 없어 교인 검색으로 보낸다(있는 것만 연결).
  */
-function TopBar() {
-  const [paletteOpen, setPaletteOpen] = useState(false);
+function TopBar({ onSearch }: { onSearch: () => void }) {
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
   // flex 의 toolbox — 높이 56px(--sizes-xlarge)에 고정
@@ -197,7 +200,7 @@ function TopBar() {
       {/* 노션처럼 검색창 = 빠른 이동(⌘K). 교인뿐 아니라 메뉴·간사·선교사·훈련 기수까지 찾는다 */}
       <button
         type="button"
-        onClick={() => setPaletteOpen(true)}
+        onClick={onSearch}
         className="relative flex h-8 max-w-sm flex-1 items-center rounded-md bg-[var(--color-muted)] pr-2 pl-8 text-left text-sm text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)]"
       >
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
@@ -206,7 +209,6 @@ function TopBar() {
           {isMac ? '⌘K' : 'Ctrl K'}
         </kbd>
       </button>
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} navItems={NAV_GROUPS.flatMap(group => group.items)} />
 
       <div className="ml-auto flex items-center gap-1">
         <Link
@@ -319,7 +321,7 @@ const ROLE_LABEL: Record<string, string> = {
   viewer: '조회 전용',
 };
 
-function MobileHeader() {
+function MobileHeader({ onSearch }: { onSearch: () => void }) {
   const branding = useChurchBranding();
   const { state } = useAuth();
   const account = state.status === 'authenticated' ? state.account : null;
@@ -330,6 +332,10 @@ function MobileHeader() {
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold">{branding.name}</div>
       </div>
+      {/* 폰에는 단축키가 없어서 버튼으로 빠른 이동을 연다 */}
+      <Button variant="ghost" size="icon" onClick={onSearch} aria-label="검색·빠른 이동" title="검색·빠른 이동">
+        <Search className="size-5" />
+      </Button>
       <Link to="/app/settings" aria-label="설정">
         {account ? (
           <Avatar name={account.name} src={account.pictureUrl} size="sm" />
